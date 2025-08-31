@@ -1,11 +1,4 @@
 /** @type {import('next').NextConfig} */
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-// ESM 下手动得到 __dirname
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -14,17 +7,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' }
     ]
   },
-  experimental: {
-    serverActions: { allowedOrigins: ['*'] }
-  },
-  webpack: (config) => {
-    // "@/..." 指向项目根目录
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
-      '@': path.resolve(__dirname)
-    }
-    return config
-  }
+  experimental: { serverActions: { allowedOrigins: ['*'] } },
+  // 不配置 webpack alias，已用相对路径，最稳
 }
-
 export default nextConfig
