@@ -4,10 +4,12 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.blob.vercel-storage.com' },
       { protocol: 'https', hostname: '**.vercel-storage.com' },
-      { protocol: 'https', hostname: 'images.unsplash.com' }
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'cdn.sanity.io' }
     ]
   },
-  experimental: { serverActions: { allowedOrigins: ['*'] } },
-  // 不配置 webpack alias，已用相对路径，最稳
+  experimental: {
+    serverActions: { allowedOrigins: ['*'] }
+  }
 }
 export default nextConfig
