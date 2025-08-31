@@ -2,7 +2,6 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
 
-// 关键：在 ESM (.mjs) 里手动得到 __dirname
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -14,11 +13,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'images.unsplash.com' }
     ]
   },
-  experimental: {
-    serverActions: { allowedOrigins: ['*'] }
-  },
+  experimental: { serverActions: { allowedOrigins: ['*'] } },
   webpack: (config) => {
-    // "@/..." 指到项目根目录
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       '@': path.resolve(__dirname)
@@ -28,4 +24,3 @@ const nextConfig = {
 }
 
 export default nextConfig
-fix: esm dirname
