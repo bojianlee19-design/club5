@@ -1,35 +1,48 @@
-import Link from 'next/link'
-import EventsSection from '@/components/sections/EventsSection'
-import GalleryStrip from '@/components/sections/GalleryStrip'
+'use client'
 
-export default async function Home() {
+import { useEffect, useState } from 'react'
+
+type Item = { url: string; pathname: string; size: number; uploadedAt: string }
+
+export default function Home() {
+  const [items, setItems] = useState<Item[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/gallery', { cache: 'no-store' })
+        const data = await res.json()
+        if (!cancelled) {
+          if (data?.ok) setItems(data.items || [])
+          else setError('Gallery API failed')
+        }
+      } catch {
+        if (!cancelled) setError('Network error')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   return (
-    <div>
-      <section className="relative py-24 md:py-36">
-        <div className="absolute inset-0 -z-10 bg-brand-gradient opacity-20 blur-3xl" />
-        <div className="container-max">
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight">
-            <span className="gradient-text">HAZY</span> is coming in hot.
-          </h1>
-          <p className="mt-4 text-white/70 max-w-2xl">
-            Sheffield’s new home of sound. Immersive lights, heavy bass,
-            and unforgettable nights. Get on the list — don’t miss the launch.
-          </p>
-          <div className="mt-8 flex gap-3">
-            <Link className="btn btn-primary" href="/events">See Events</Link>
-            <Link className="btn btn-outline" href="/sign-up">Sign Up</Link>
-          </div>
-        </div>
-      </section>
-      <EventsSection limit={3} />
-      <GalleryStrip />
-      <section className="py-16">
-        <div className="container-max card p-8">
-          <h2 className="text-2xl font-semibold mb-3">Venue Hire</h2>
-          <p className="text-white/70 mb-4">Private events, brand takeovers, and everything in between. Make it yours.</p>
-          <Link className="btn btn-primary" href="/venue-hire">Enquire</Link>
-        </div>
-      </section>
-    </div>
+    <main style={{ minHeight: '100vh', color: '#fff', background: '#000', padding: 24, fontFamily: 'ui-sans-serif, system-ui' }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>Hazy Club</h1>
+
+      {loading && <p>Loading…</p>}
+      {error && <p style={{ color: '#f99' }}>Failed to load gallery. You can still use the site.</p>}
+
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
+        {items.map((it) => (
+          <a key={it.pathname} href={it.url} target="_blank" rel="noreferrer"
+             style={{ display: 'block', borderRadius: 12, overflow: 'hidden', background: '#111', border: '1px solid #222' }}>
+            <img src={it.url} alt={it.pathname} style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+          </a>
+        ))}
+      </div>
+    </main>
   )
 }
