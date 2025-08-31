@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -12,12 +17,13 @@ const nextConfig = {
     serverActions: { allowedOrigins: ['*'] }
   },
   webpack: (config) => {
-    // Fallback alias to ensure "@/..." resolves on build servers
+    // "@/..." 指向项目根目录
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       '@': path.resolve(__dirname)
     }
     return config
   }
-};
-export default nextConfig;
+}
+
+export default nextConfig
