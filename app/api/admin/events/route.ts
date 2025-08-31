@@ -7,8 +7,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
   }
   const data = await req.json()
-  const id = data.id || data.slug || String(Date.now())
+  const id = (data.id || data.slug || String(Date.now())).toString()
   await saveJSON(`data/events/${id}.json`, data)
   return NextResponse.json({ ok: true, id })
 }
-
