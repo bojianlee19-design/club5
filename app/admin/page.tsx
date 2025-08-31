@@ -1,153 +1,150 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { format } from 'date-fns'
 
-type EventItem = {
-  id?: string
-  title: string
-  date: string
-  venue?: string
-  lineup?: string
-  coverUrl?: string
-  ticketsUrl?: string
-  description?: string
-}
+import React, { useState } from 'react'
 
-export default function Admin() {
-  const [authed, setAuthed] = useState(false)
-  const [password, setPassword] = useState('')
-  const [tab, setTab] = useState<'events'|'gallery'|'news'>('events')
-  const [events, setEvents] = useState<EventItem[]>([])
-  const [img, setImg] = useState<File | null>(null)
+type Json = Record<string, any>
+
+export default function AdminPage() {
   const [uploading, setUploading] = useState(false)
-
-  async function login() {
-    const res = await fetch('/api/admin/login', { method:'POST', body: JSON.stringify({ password }) })
-    setAuthed(res.ok)
-    if (!res.ok) alert('Invalid password')
-  }
-  async function loadEvents() {
-    const res = await fetch('/api/events', { cache:'no-store' })
-    if (!res.ok) return
-    const data = await res.json()
-    setEvents(data.events)
-  }
-  useEffect(()=>{ if(authed) loadEvents() }, [authed])
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
 
   async function saveEvent(form: FormData) {
-    const payload = Object.fromEntries(form.entries())
-    payload.lineup = payload.lineup ? String(payload.lineup).split(',').map(s=>s.trim()) : []
-    const res = await fetch('/api/admin/events', { method:'POST', body: JSON.stringify(payload) })
-    if (res.ok) { await loadEvents(); (document.getElementById('event-form') as HTMLFormElement).reset() }
-    else alert('Failed to save event')
-  }
+    // 将 FormData 转成普通对象，再做字段加工
+    const entries = Object.fromEntries(form.entries())
+    const payload: Json = { ...entries }
 
+    // lineup 从 string → string[]
+    const rawLineup = form.get('lineup')
+    payload.lineup =
+      typeof rawLineup === 'string'
+        ? rawLineup.split(',').map((s) => s.trim()).filter(Boolean)
+        : []
 
-  async function deleteEvent(id: string) {
-    if (!confirm('Delete this event?')) return
-    const res = await fetch(`/api/admin/events?id=${id}`, { method:'DELETE' })
-    if (res.ok) loadEvents()
-  }
-
-  async function uploadImage() {
-    if (!img) return
-    setUploading(true)
-    const fd = new FormData()
-    fd.set('file', img)
-    fd.set('folder', 'gallery')
-    const res = await fetch('/api/admin/upload', { method:'POST', body: fd })
-    setUploading(false)
-    const data = await res.json()
+    const res = await fetch('/api/admin/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
     if (res.ok) {
-      alert('Uploaded: ' + data.url)
+      alert('Event saved ✅')
+      ;(document.getElementById('event-form') as HTMLFormElement).reset()
     } else {
-      alert('Upload failed')
+      alert('Failed to save event ❌')
     }
   }
 
   async function saveNews(form: FormData) {
-    const payload = Object.fromEntries(form.entries())
-    const res = await fetch('/api/admin/news', { method:'POST', body: JSON.stringify(payload) })
-    if (res.ok) { alert('Saved'); (document.getElementById('news-form') as HTMLFormElement).reset() }
+    const entries = Object.fromEntries(form.entries())
+    const payload: Json = { ...entries }
+
+    const res = await fetch('/api/admin/news', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) {
+      alert('News saved ✅')
+      ;(document.getElementById('news-form') as HTMLFormElement).reset()
+    } else {
+      alert('Failed to save news ❌')
+    }
   }
 
-  if (!authed) {
-    return (
-      <div className="container-max py-12 max-w-md">
-        <h1 className="text-2xl font-semibold mb-4">Admin Sign In</h1>
-        <div className="card p-6 space-y-3">
-          <input type="password" placeholder="Admin password" value={password} onChange={e=>setPassword(e.target.value)} />
-          <button className="btn btn-primary" onClick={login}>Sign In</button>
-          <p className="text-white/50 text-sm">Set <code>ADMIN_PASSWORD</code> in .env (or Vercel) before using.</p>
-        </div>
-      </div>
-    )
+  async function uploadImage(form: FormData) {
+    setUploading(true)
+    setUploadedUrl(null)
+    try {
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: form, // 注意：上传文件时不要加 Content-Type，浏览器会自动带 boundary
+      })
+      if (!res.ok) throw new Error('upload failed')
+      const data = await res.json()
+      setUploadedUrl(data.url)
+      alert('Image uploaded ✅')
+    } catch (e) {
+      console.error(e)
+      alert('Image upload failed ❌')
+    } finally {
+      setUploading(false)
+      ;(document.getElementById('upload-form') as HTMLFormElement).reset()
+    }
   }
 
   return (
-    <div className="container-max py-8 space-y-6">
-      <div className="flex gap-2">
-        <button className={`btn ${tab==='events'?'btn-primary':'btn-outline'}`} onClick={()=>setTab('events')}>Events</button>
-        <button className={`btn ${tab==='gallery'?'btn-primary':'btn-outline'}`} onClick={()=>setTab('gallery')}>Gallery</button>
-        <button className={`btn ${tab==='news'?'btn-primary':'btn-outline'}`} onClick={()=>setTab('news')}>News</button>
-      </div>
+    <main style={{ maxWidth: 900, margin: '40px auto', padding: 16, fontFamily: 'ui-sans-serif, system-ui' }}>
+      <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 16 }}>Admin Panel</h1>
 
-      {tab === 'events' && (
-        <div className="grid md:grid-cols-2 gap-8">
-          <form id="event-form" action={(formData)=>saveEvent(formData as any)} className="card p-6 space-y-3">
-            <h2 className="text-xl font-semibold">Create / Update Event</h2>
-            <div className="row">
-              <div><label>Title</label><input name="title" required /></div>
-              <div><label>Date & time</label><input type="datetime-local" name="date" required /></div>
-            </div>
-            <div className="row">
-              <div><label>Venue</label><input name="venue" placeholder="HAZY Club, Sheffield" /></div>
-              <div><label>Tickets URL</label><input name="ticketsUrl" placeholder="https://..." /></div>
-            </div>
-            <div><label>Lineup (comma-separated)</label><input name="lineup" placeholder="DJ A, DJ B" /></div>
-            <div><label>Cover Image URL</label><input name="coverUrl" placeholder="https://..." /></div>
-            <div><label>Description (supports plain text)</label><textarea name="description" rows={5} /></div>
-            <button className="btn btn-primary" type="submit">Save Event</button>
-          </form>
-
-          <div className="space-y-3">
-            <h2 className="text-xl font-semibold">Existing Events</h2>
-            <div className="space-y-3">
-              {events.map(e => (
-                <div key={e.id} className="card p-4 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold">{e.title}</div>
-                    <div className="text-white/60 text-sm">{new Date(e.date).toLocaleString()}</div>
-                  </div>
-                  <button className="btn btn-outline" onClick={()=>deleteEvent(e.id!)}>Delete</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tab === 'gallery' && (
-        <div className="card p-6 space-y-3 max-w-lg">
-          <h2 className="text-xl font-semibold">Upload Image</h2>
-          <input type="file" accept="image/*" onChange={e=>setImg(e.target.files?.[0] || null)} />
-          <button className="btn btn-primary" onClick={uploadImage} disabled={uploading}>{uploading? 'Uploading...' : 'Upload'}</button>
-          <p className="text-white/60 text-sm">Images go to <code>gallery/</code> on Vercel Blob.</p>
-        </div>
-      )}
-
-      {tab === 'news' && (
-        <form id="news-form" action={(formData)=>saveNews(formData as any)} className="card p-6 space-y-3 max-w-2xl">
-          <h2 className="text-xl font-semibold">Publish News</h2>
-          <div className="row">
-            <div><label>Title</label><input name="title" required /></div>
-            <div><label>Date</label><input type="date" name="date" required /></div>
-          </div>
-          <div><label>Cover Image URL</label><input name="coverUrl" placeholder="https://..." /></div>
-          <div><label>Body (HTML allowed)</label><textarea name="body" rows={8} placeholder="<p>Launch weekend announced...</p>" /></div>
-          <button className="btn btn-primary" type="submit">Publish</button>
+      {/* Event */}
+      <section style={{ padding: 16, border: '1px solid #eee', borderRadius: 12, marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Create / Update Event</h2>
+        <form
+          id="event-form"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            const f = new FormData(e.currentTarget)
+            await saveEvent(f)
+          }}
+          style={{ display: 'grid', gap: 12 }}
+        >
+          <input name="id" placeholder="ID/Slug (可留空自动生成)" />
+          <input name="title" placeholder="Title" required />
+          <input name="date" placeholder="Date (YYYY-MM-DD)" />
+          <input name="image" placeholder="Image URL (可选)" />
+          <input name="lineup" placeholder="Lineup（用英文逗号分隔）" />
+          <textarea name="description" placeholder="Description" rows={4} />
+          <button type="submit" style={{ padding: '8px 14px', borderRadius: 8, background: 'black', color: 'white' }}>
+            Save Event
+          </button>
         </form>
-      )}
-    </div>
+      </section>
+
+      {/* News */}
+      <section style={{ padding: 16, border: '1px solid #eee', borderRadius: 12, marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Create / Update News</h2>
+        <form
+          id="news-form"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            const f = new FormData(e.currentTarget)
+            await saveNews(f)
+          }}
+          style={{ display: 'grid', gap: 12 }}
+        >
+          <input name="id" placeholder="ID/Slug (可留空自动生成)" />
+          <input name="title" placeholder="Title" required />
+          <input name="image" placeholder="Image URL (可选)" />
+          <textarea name="content" placeholder="Content" rows={4} />
+          <button type="submit" style={{ padding: '8px 14px', borderRadius: 8, background: 'black', color: 'white' }}>
+            Save News
+          </button>
+        </form>
+      </section>
+
+      {/* Upload */}
+      <section style={{ padding: 16, border: '1px solid #eee', borderRadius: 12 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Upload Image to Blob</h2>
+        <form
+          id="upload-form"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            const f = new FormData(e.currentTarget)
+            await uploadImage(f)
+          }}
+          style={{ display: 'grid', gap: 12 }}
+        >
+          <input type="file" name="file" accept="image/*" required />
+          <button type="submit" disabled={uploading} style={{ padding: '8px 14px', borderRadius: 8, background: 'black', color: 'white' }}>
+            {uploading ? 'Uploading…' : 'Upload'}
+          </button>
+        </form>
+        {uploadedUrl && (
+          <p style={{ marginTop: 12 }}>
+            Uploaded URL:&nbsp;
+            <a href={uploadedUrl} target="_blank" rel="noreferrer">{uploadedUrl}</a>
+          </p>
+        )}
+      </section>
+    </main>
   )
 }
