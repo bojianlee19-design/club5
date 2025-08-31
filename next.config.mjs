@@ -2,6 +2,7 @@
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+// 这两行是关键：在 ESM（.mjs）里手动得到 __dirname
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -27,3 +28,4 @@ const nextConfig = {
 }
 
 export default nextConfig
+fix: esm dirname
