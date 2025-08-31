@@ -1,22 +1,35 @@
-import EventCard, { type EventItem } from '@/components/EventCard'
+import { sanityClient } from '@/lib/sanity.client'
 
-async function fetchEvents(): Promise<EventItem[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/events`, { cache: 'no-store' })
-  const data = await res.json()
-  return data.events as EventItem[]
+type Event = {
+  _id: string
+  title: string
+  date?: string
+  lineup?: string[]
+  description?: string
 }
 
+export const revalidate = 60
+
 export default async function EventsPage() {
-  const events = await fetchEvents()
+  const events: Event[] = await sanityClient.fetch(
+    `*[_type=="event" && published==true]|order(coalesce(date, _createdAt) desc){
+      _id,title,date,lineup,description
+    }`
+  )
+
   return (
-    <div className="container-max py-12 space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold">Events</h1>
-        <p className="text-white/70">All listings.</p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map(e => <EventCard key={e.id} e={e} />)}
-      </div>
-    </div>
+    <main style={{ padding:24, fontFamily:'ui-sans-serif, system-ui' }}>
+      <h1 style={{ fontSize:28, fontWeight:700, marginBottom:16 }}>Events</h1>
+      <ul style={{ display:'grid', gap:16, listStyle:'none', padding:0 }}>
+        {events.map(e => (
+          <li key={e._id} style={{ border:'1px solid #eee', borderRadius:12, padding:16 }}>
+            <h3 style={{ margin:'0 0 6px' }}>{e.title}</h3>
+            {e.date && <div style={{ opacity:.7, marginBottom:6 }}>{e.date}</div>}
+            {e.lineup?.length ? <div style={{ marginBottom:8 }}>{e.lineup.join(' · ')}</div> : null}
+            {e.description && <p style={{ margin:0 }}>{e.description}</p>}
+          </li>
+        ))}
+      </ul>
+    </main>
   )
 }
