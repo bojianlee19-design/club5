@@ -9,18 +9,16 @@ export default function AdminPage() {
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
 
   async function saveEvent(form: FormData) {
-    // 将 FormData 转成普通对象，再做字段加工
     const entries = Object.fromEntries(form.entries())
     const payload: Json = { ...entries }
 
-    // lineup 从 string → string[]
     const rawLineup = form.get('lineup')
     payload.lineup =
       typeof rawLineup === 'string'
         ? rawLineup.split(',').map((s) => s.trim()).filter(Boolean)
         : []
 
-    const res = await fetch('/api/admin/events', {
+    const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -37,7 +35,7 @@ export default function AdminPage() {
     const entries = Object.fromEntries(form.entries())
     const payload: Json = { ...entries }
 
-    const res = await fetch('/api/admin/news', {
+    const res = await fetch('/api/news', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -54,10 +52,7 @@ export default function AdminPage() {
     setUploading(true)
     setUploadedUrl(null)
     try {
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        body: form, // 注意：上传文件时不要加 Content-Type，浏览器会自动带 boundary
-      })
+      const res = await fetch('/api/upload', { method: 'POST', body: form })
       if (!res.ok) throw new Error('upload failed')
       const data = await res.json()
       setUploadedUrl(data.url)
@@ -80,11 +75,7 @@ export default function AdminPage() {
         <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Create / Update Event</h2>
         <form
           id="event-form"
-          onSubmit={async (e) => {
-            e.preventDefault()
-            const f = new FormData(e.currentTarget)
-            await saveEvent(f)
-          }}
+          onSubmit={async (e) => { e.preventDefault(); await saveEvent(new FormData(e.currentTarget)) }}
           style={{ display: 'grid', gap: 12 }}
         >
           <input name="id" placeholder="ID/Slug (可留空自动生成)" />
@@ -104,11 +95,7 @@ export default function AdminPage() {
         <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Create / Update News</h2>
         <form
           id="news-form"
-          onSubmit={async (e) => {
-            e.preventDefault()
-            const f = new FormData(e.currentTarget)
-            await saveNews(f)
-          }}
+          onSubmit={async (e) => { e.preventDefault(); await saveNews(new FormData(e.currentTarget)) }}
           style={{ display: 'grid', gap: 12 }}
         >
           <input name="id" placeholder="ID/Slug (可留空自动生成)" />
@@ -126,11 +113,7 @@ export default function AdminPage() {
         <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Upload Image to Blob</h2>
         <form
           id="upload-form"
-          onSubmit={async (e) => {
-            e.preventDefault()
-            const f = new FormData(e.currentTarget)
-            await uploadImage(f)
-          }}
+          onSubmit={async (e) => { e.preventDefault(); await uploadImage(new FormData(e.currentTarget)) }}
           style={{ display: 'grid', gap: 12 }}
         >
           <input type="file" name="file" accept="image/*" required />
