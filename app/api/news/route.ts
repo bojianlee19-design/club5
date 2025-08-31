@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
-import { list } from '@vercel/blob'
+import { isAuthed } from '../../../lib/admin'
+import { saveJSON } from '../../../lib/blob'
 
-export async function GET() {
-  const blobs = await list({ prefix: 'news/' })
-  const posts = await Promise.all(blobs.blobs.map(async (b) => {
-    const res = await fetch(b.url, { cache: 'no-store' })
-    return await res.json()
-  }))
-  posts.sort((a:any,b:any)=> new Date(b.date).getTime() - new Date(a.date).getTime())
-  return NextResponse.json({ posts })
+export async function POST(req: Request) {
+  if (!isAuthed()) {
+    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 })
+  }
+  const data = await req.json()
+  const id = (data.id || data.slug || String(Date.now())).toString()
+  await saveJSON(`data/news/${id}.json`, data)
+  return NextResponse.json({ ok: true, id })
 }
