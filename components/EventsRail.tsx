@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 
+// 尽量兼容不同字段命名
 type AnyEvent = {
   id?: string
   _id?: string
@@ -40,7 +40,7 @@ function pickImg(e: AnyEvent) {
     e.cover ||
     e.poster ||
     e.mainImage?.url ||
-    '/fallback-event.jpg' // 如无就会用占位
+    '/fallback-event.jpg'
   )
 }
 
@@ -50,7 +50,6 @@ export default function EventsRail() {
   const [err, setErr] = useState<string | null>(null)
   const railRef = useRef<HTMLDivElement>(null)
 
-  // 拉数据：优先 /api/events（你已有），失败再尝试 /api/news 或空
   useEffect(() => {
     let dead = false
     ;(async () => {
@@ -59,7 +58,8 @@ export default function EventsRail() {
         const r = await fetch('/api/events', { cache: 'no-store' })
         if (!r.ok) throw new Error('events api not ok')
         const data = await r.json()
-        if (!dead) setEvents(Array.isArray(data) ? data : data?.items || [])
+        const list = Array.isArray(data) ? data : data?.items || []
+        if (!dead) setEvents(list)
       } catch (e) {
         console.error(e)
         if (!dead) setErr('failed')
@@ -72,31 +72,29 @@ export default function EventsRail() {
     }
   }, [])
 
-  // 为了无缝循环，复制一份
+  // 无缝循环
   const doubled = useMemo(() => {
     if (!events?.length) return []
     return [...events, ...events]
   }, [events])
 
-  // 自动匀速滚动（并支持拖拽）
+  // 自动滚动 + 拖拽
   useEffect(() => {
     const el = railRef.current
     if (!el || !events.length) return
 
     let raf = 0
     let last = performance.now()
-    const speed = 0.3 // 像素/帧，越大滚得越快
+    const speed = 0.35
     const step = (t: number) => {
       const dt = t - last
       last = t
-      el.scrollLeft += speed * (dt / (1000 / 60)) // 近似 60fps 基准
-      // 到尾了就重置到中间前半段，实现循环
+      el.scrollLeft += speed * (dt / (1000 / 60))
       if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft = 0
       raf = requestAnimationFrame(step)
     }
     raf = requestAnimationFrame(step)
 
-    // 拖拽
     let isDown = false
     let startX = 0
     let startLeft = 0
@@ -164,19 +162,16 @@ export default function EventsRail() {
               prefetch={false}
             >
               <article className="relative w-[320px] h-[420px] rounded-2xl overflow-hidden bg-[#0c0c0c]">
-                {/* 背景图 */}
                 <div className="absolute inset-0">
-                  <Image
+                  {/* 用原生 img，避免外域需要配置 next/image */}
+                  <img
                     src={img}
                     alt={title}
-                    fill
-                    sizes="320px"
-                    className="object-cover"
-                    unoptimized={img.startsWith('/')}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                 </div>
-                {/* 文案 */}
                 <div className="absolute bottom-0 left-0 right-0 p-5">
                   {dateText && (
                     <div className="text-xs tracking-wide uppercase text-zinc-300 mb-1">{dateText}</div>
@@ -192,11 +187,11 @@ export default function EventsRail() {
         })}
       </div>
 
-      {/* 轻微两侧渐隐，MOS 风格 */}
+      {/* 两侧渐隐 */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0b0b0b] to-transparent" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0b0b0b] to-transparent" />
 
-      {/* 隐藏滚动条（无需额外插件） */}
+      {/* 隐藏滚动条 */}
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;
