@@ -10,7 +10,7 @@ export default function HomePage() {
       {/* 顶部全屏视频：会优先尝试 webm，失败回退到 mp4；没有就显示 poster */}
       <section>
         <VideoHero
-          sources={['/hero.webm', '/hero.mp4']}
+          sources={['/hero.webm', '/hero.mp4?v=1']}
           poster="/hero-poster.jpg"
           heading="HAZY CLUB"
           subheading="NIGHTS · MUSIC · COMMUNITY"
