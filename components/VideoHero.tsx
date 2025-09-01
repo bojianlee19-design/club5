@@ -1,206 +1,79 @@
 'use client'
-
-import { useEffect, useRef, useState, ReactNode } from 'react'
-import Link from 'next/link'
-
-type Cta = { href: string; label: string }
+import {useEffect, useRef, useState} from 'react'
 
 type Props = {
+  sources: string[]   // 例 ['/hero.webm', '/hero.mp4']
   poster?: string
-  sources?: string[] // 默认 ['/hero.webm', '/hero.mp4']
-  className?: string
-  heading?: string
+  heading: string
   subheading?: string
-  cta?: Cta
-  children?: ReactNode
+  cta?: { href: string; label: string }
 }
 
-async function headOK(url: string) {
-  try {
-    const r = await fetch(url, { method: 'HEAD', cache: 'no-store' })
-    return r.ok
-  } catch {
-    return false
-  }
-}
-
-export default function VideoHero({
-  poster = '/hero-poster.jpg',
-  sources,
-  className,
-  heading,
-  subheading,
-  cta,
-  children,
-}: Props) {
-  const [okSrcs, setOkSrcs] = useState<string[]>([])
-  const [checked, setChecked] = useState(false)
-  const [needsTap, setNeedsTap] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
+export default function VideoHero({ sources, poster, heading, subheading, cta }: Props) {
+  const ref = useRef<HTMLVideoElement|null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    let cancelled = false
-    const candidates = sources ?? ['/hero.webm', '/hero.mp4']
-    ;(async () => {
-      const res: string[] = []
-      for (const u of candidates) {
-        if (!u) continue
-        if (await headOK(u)) res.push(u)
-      }
-      if (!cancelled) {
-        setOkSrcs(res)
-        setChecked(true)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [sources])
-
-  // 元数据就绪后主动播放（部分浏览器需要显式 play()）
-  const tryPlay = async () => {
-    const v = videoRef.current
+    const v = ref.current
     if (!v) return
-    try {
-      await v.play()
-      setNeedsTap(false)
-    } catch {
-      // NotAllowedError：需要手势
-      setNeedsTap(true)
+    const tryPlay = async () => {
+      try {
+        await v.play()
+      } catch {
+        // 某些浏览器第一时间会拒绝，等 meta/loadeddata 再试
+        const onLoaded = async () => {
+          try { await v.play() } catch { /* ignore */ }
+          v.removeEventListener('loadeddata', onLoaded)
+          v.removeEventListener('loadedmetadata', onLoaded)
+        }
+        v.addEventListener('loadeddata', onLoaded)
+        v.addEventListener('loadedmetadata', onLoaded)
+      }
     }
-  }
-
-  const hasVideo = okSrcs.length > 0
+    tryPlay()
+  }, [])
 
   return (
-    <section
-      className={className}
-      style={{
-        position: 'relative',
-        height: 'min(92vh, 900px)',
-        overflow: 'hidden',
-        background: '#000',
-        borderRadius: 16,
-      }}
-    >
-      {/* 背景层：视频或海报 */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-        {checked && hasVideo ? (
-          <video
-            ref={videoRef}
-            key={okSrcs.join('|')}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            poster={poster}
-            onLoadedData={tryPlay}
-            onLoadedMetadata={tryPlay}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              filter: 'brightness(0.92)',
-            }}
-          >
-            {okSrcs.map((u) => {
-              const type =
-                u.endsWith('.webm') ? 'video/webm' :
-                u.endsWith('.mp4')  ? 'video/mp4'  :
-                undefined
-              return <source key={u} src={u} type={type} />
-            })}
-          </video>
-        ) : (
-          <img
-            src={poster}
-            alt="Hero Poster"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
-        )}
-      </div>
-
-      {/* 顶层文案 */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          height: '100%',
-          display: 'grid',
-          placeItems: 'center',
-          textAlign: 'center',
-          padding: '6vh 5vw',
-          color: '#fff',
-        }}
-      >
-        {children ?? (
-          <div>
-            {heading && (
-              <h1 style={{ fontSize: 48, lineHeight: 1.06, fontWeight: 900, margin: '0 0 10px' }}>
-                {heading}
-              </h1>
-            )}
-            {subheading && <p style={{ opacity: 0.9, fontSize: 16, margin: 0 }}>{subheading}</p>}
-            {cta && (
-              <div style={{ marginTop: 20 }}>
-                <Link
-                  href={cta.href}
-                  className="inline-flex items-center gap-2 rounded-full px-5 py-2 bg-white text-black hover:bg-zinc-200 transition"
-                >
-                  {cta.label} <span aria-hidden>→</span>
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 渐变叠层提升可读性 */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.70) 100%)',
-          zIndex: 0,
-        }}
-      />
-
-      {/* 若需要手势才能播放，给个轻提示按钮 */}
-      {needsTap && hasVideo && (
-        <button
-          onClick={tryPlay}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/90 text-black text-sm px-4 py-2 hover:bg-white z-10"
+    <section className="hero">
+      {!failed ? (
+        <video
+          ref={ref}
+          className="hero-video"
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="auto"
+          poster={poster}
+          onError={() => setFailed(true)}
         >
-          Tap to play
-        </button>
+          {sources.map((src, i) => (
+            <source key={i} src={src} type={src.endsWith('.webm') ? 'video/webm' : 'video/mp4'} />
+          ))}
+        </video>
+      ) : (
+        <div className="hero-fallback" style={poster ? { backgroundImage: `url(${poster})` } : undefined}/>
       )}
 
-      {/* 开发态简单诊断 */}
-      {process.env.NODE_ENV !== 'production' && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 8,
-            background: 'rgba(0,0,0,.6)',
-            color: '#fff',
-            fontSize: 12,
-            padding: '6px 10px',
-            borderRadius: 8,
-            zIndex: 2,
-          }}
-        >
-          {checked
-            ? hasVideo
-              ? `Video sources: ${okSrcs.join(', ')}`
-              : 'No video found (showing poster)'
-            : 'Checking /hero.webm, /hero.mp4 ...'}
-        </div>
-      )}
+      <div className="hero-overlay">
+        <h1>{heading}</h1>
+        {subheading && <p className="sub">{subheading}</p>}
+        {cta && <a href={cta.href} className="btn">{cta.label}</a>}
+      </div>
+
+      <style jsx>{`
+        .hero{position:relative;min-height:72vh;background:#000;overflow:hidden}
+        .hero-video,.hero-fallback{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background-size:cover;background-position:center}
+        .hero-overlay{
+          position:relative;z-index:2;display:flex;flex-direction:column;gap:12px;
+          padding:22vh 6vw 12vh;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.35) 35%,rgba(0,0,0,.2) 60%,transparent 100%);
+          color:#fff;max-width:1200px;margin:0 auto
+        }
+        h1{font-size:clamp(32px,6vw,72px);line-height:1.05;margin:0;font-weight:800;letter-spacing:.01em}
+        .sub{opacity:.92;font-size:clamp(14px,2.5vw,18px);margin:4px 0 10px}
+        .btn{display:inline-block;padding:10px 18px;border:1px solid #fff;border-radius:999px;color:#000;background:#fff;text-decoration:none;font-weight:600}
+        .btn:hover{opacity:.9}
+      `}</style>
     </section>
   )
 }
