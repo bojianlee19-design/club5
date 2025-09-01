@@ -6,20 +6,27 @@ type Event = {
   title?: string
   date?: string // YYYY-MM-DD
   lineup?: string[]
-  image?: { asset?: { _ref?: string; _type?: string } } | any
+  image?: any
   slug?: { current?: string }
   ticketUrl?: string
   ageRestriction?: string
   priceFrom?: number
   soldOut?: boolean
   genres?: string[]
-  cover?: string // 我们会从父组件传入已生成的 URL（可选）
+  cover?: string // 父组件传入已生成的 URL
 }
 
-function parseDate(s?: string) {
-  if (!s) return null
-  const d = new Date(s + 'T00:00:00Z')
-  return Number.isNaN(+d) ? null : d
+function isWeekend(dateStr?: string) {
+  if (!dateStr) return false
+  const d = new Date(dateStr + 'T00:00:00')
+  const day = d.getDay() // 0 Sun, 6 Sat
+  return day === 0 || day === 6
+}
+function isWeekday(dateStr?: string) {
+  if (!dateStr) return false
+  const d = new Date(dateStr + 'T00:00:00')
+  const day = d.getDay()
+  return day >= 1 && day <= 5
 }
 
 export default function TicketsGrid({ events }: { events: Event[] }) {
@@ -27,6 +34,8 @@ export default function TicketsGrid({ events }: { events: Event[] }) {
   const [genre, setGenre] = useState<string>('all')
   const [maxPrice, setMaxPrice] = useState<number | ''>('')
   const [onlyUpcoming, setOnlyUpcoming] = useState(true)
+  const [dayFilter, setDayFilter] = useState<'all' | 'weekend' | 'weekday'>('all')
+  const [sortKey, setSortKey] = useState<'date' | 'price' | 'title'>('date')
 
   const allGenres = useMemo(() => {
     const set = new Set<string>()
@@ -50,14 +59,39 @@ export default function TicketsGrid({ events }: { events: Event[] }) {
         ].join(' ').toLowerCase()
         if (!hay.includes(q)) return false
       }
+      if (dayFilter === 'weekend' && !isWeekend(e.date)) return false
+      if (dayFilter === 'weekday' && !isWeekday(e.date)) return false
       return true
     })
-  }, [events, query, genre, maxPrice, onlyUpcoming, todayStr])
+  }, [events, query, genre, maxPrice, onlyUpcoming, dayFilter, todayStr])
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered]
+    arr.sort((a, b) => {
+      // 先把 SOLD OUT 放到最后
+      if (!!a.soldOut !== !!b.soldOut) return a.soldOut ? 1 : -1
+
+      // 再按选择的 sortKey
+      if (sortKey === 'date') {
+        const da = a.date || '9999-12-31'
+        const db = b.date || '9999-12-31'
+        return da.localeCompare(db)
+      }
+      if (sortKey === 'price') {
+        const pa = typeof a.priceFrom === 'number' ? a.priceFrom : Number.POSITIVE_INFINITY
+        const pb = typeof b.priceFrom === 'number' ? b.priceFrom : Number.POSITIVE_INFINITY
+        return pa - pb
+      }
+      // title
+      return (a.title || '').localeCompare(b.title || '')
+    })
+    return arr
+  }, [filtered, sortKey])
 
   return (
     <div>
       {/* 过滤条 */}
-      <div style={{ display:'grid', gap:10, gridTemplateColumns:'1fr 1fr 1fr 1fr', margin:'0 0 14px' }}>
+      <div style={{ display:'grid', gap:10, gridTemplateColumns:'1.2fr 1fr 1fr 1.2fr 1fr 1fr', margin:'0 0 14px' }}>
         <input
           placeholder="Search title / lineup…"
           value={query}
@@ -79,15 +113,33 @@ export default function TicketsGrid({ events }: { events: Event[] }) {
           onChange={e=>setMaxPrice(e.target.value === '' ? '' : Number(e.target.value))}
           style={{ background:'#0f0f0f', border:'1px solid #222', color:'#fff', borderRadius:999, padding:'10px 12px' }}
         />
-        <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:14 }}>
+        <select
+          value={dayFilter}
+          onChange={e=>setDayFilter(e.target.value as any)}
+          style={{ background:'#0f0f0f', border:'1px solid #222', color:'#fff', borderRadius:999, padding:'10px 12px' }}
+        >
+          <option value="all">All days</option>
+          <option value="weekend">Weekend only</option>
+          <option value="weekday">Weekdays only</option>
+        </select>
+        <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:14, padding:'0 8px' }}>
           <input type="checkbox" checked={onlyUpcoming} onChange={e=>setOnlyUpcoming(e.target.checked)} />
           Upcoming only
         </label>
+        <select
+          value={sortKey}
+          onChange={e=>setSortKey(e.target.value as any)}
+          style={{ background:'#0f0f0f', border:'1px solid #222', color:'#fff', borderRadius:999, padding:'10px 12px' }}
+        >
+          <option value="date">Sort by date</option>
+          <option value="price">Sort by price</option>
+          <option value="title">Sort by title</option>
+        </select>
       </div>
 
       {/* 列表 */}
       <div style={{ display:'grid', gap:14, gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))' }}>
-        {filtered.map(e => {
+        {sorted.map(e => {
           const detailHref = e.slug?.current ? `/events/${e.slug.current}` : '/events'
           const ticketHref = e.ticketUrl || detailHref
           const sold = !!e.soldOut
@@ -138,8 +190,7 @@ export default function TicketsGrid({ events }: { events: Event[] }) {
         })}
       </div>
 
-      {/* 空状态 */}
-      {!filtered.length && (
+      {!sorted.length && (
         <div style={{ textAlign:'center', color:'#9a9a9a', padding:'24px 0' }}>
           No events matched your filters.
         </div>
