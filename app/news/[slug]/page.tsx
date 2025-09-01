@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { PortableText, PortableTextComponents } from '@portabletext/react'
+import { PortableText } from '@portabletext/react'
 import { sanityClient } from '@/lib/sanity.client'
 import { urlFor } from '@/lib/sanity.image'
 
@@ -9,6 +9,7 @@ type NewsDoc = {
   slug?: { current?: string }
   image?: any
   content?: any[]
+  date?: string
 }
 
 export const revalidate = 60
@@ -22,15 +23,15 @@ export async function generateStaticParams() {
 
 async function getNews(slug: string): Promise<NewsDoc | null> {
   const doc = await sanityClient.fetch(
-    `*[_type=="news" && slug.current==$slug][0]{ _id,title,slug,image,content }`,
+    `*[_type=="news" && slug.current==$slug][0]{ _id,title,slug,image,content,date }`,
     { slug }
   )
   return doc || null
 }
 
-const components: PortableTextComponents = {
+const components = {
   types: {
-    image: ({ value }) =>
+    image: ({ value }: any) =>
       value ? (
         <img
           src={urlFor(value).width(1600).fit('max').url()}
@@ -40,14 +41,14 @@ const components: PortableTextComponents = {
       ) : null,
   },
   block: {
-    h2: ({ children }) => <h2 style={{ fontSize:22, margin:'16px 0 8px', fontWeight:800 }}>{children}</h2>,
-    h3: ({ children }) => <h3 style={{ fontSize:18, margin:'14px 0 6px', fontWeight:800 }}>{children}</h3>,
-    normal: ({ children }) => <p style={{ lineHeight:1.7, margin:'10px 0', opacity:.95 }}>{children}</p>,
+    h2: ({ children }: any) => <h2 style={{ fontSize:22, margin:'16px 0 8px', fontWeight:800 }}>{children}</h2>,
+    h3: ({ children }: any) => <h3 style={{ fontSize:18, margin:'14px 0 6px', fontWeight:800 }}>{children}</h3>,
+    normal: ({ children }: any) => <p style={{ lineHeight:1.7, margin:'10px 0', opacity:.95 }}>{children}</p>,
   },
   marks: {
-    strong: ({ children }) => <strong style={{ fontWeight:800 }}>{children}</strong>,
-    em: ({ children }) => <em style={{ opacity:.95 }}>{children}</em>,
-    link: ({ value, children }) => <a href={value?.href} target="_blank" rel="noreferrer" style={{ textDecoration:'underline' }}>{children}</a>,
+    strong: ({ children }: any) => <strong style={{ fontWeight:800 }}>{children}</strong>,
+    em: ({ children }: any) => <em style={{ opacity:.95 }}>{children}</em>,
+    link: ({ value, children }: any) => <a href={value?.href} target="_blank" rel="noreferrer" style={{ textDecoration:'underline' }}>{children}</a>,
   },
 }
 
@@ -68,8 +69,9 @@ export default async function NewsDetail({ params }: { params: { slug: string } 
 
       <article style={{ maxWidth:860, margin:'-80px auto 40px', padding:'0 16px' }}>
         <div style={{ background:'#0b0b0b', border:'1px solid #161616', borderRadius:16, padding:'20px 20px' }}>
+          {doc.date && <div style={{ fontSize:12, opacity:.75, marginBottom:6 }}>{doc.date}</div>}
           <h1 style={{ margin:'0 0 10px', fontSize:30, fontWeight:900 }}>{doc.title || 'Untitled'}</h1>
-          {doc.content?.length ? <PortableText value={doc.content} components={components} /> : <p style={{ opacity:.8 }}>No content.</p>}
+          {doc.content?.length ? <PortableText value={doc.content} components={components as any} /> : <p style={{ opacity:.8 }}>No content.</p>}
           <div style={{ marginTop:16 }}>
             <a href="/news" style={{ textDecoration:'underline' }}>Back to News</a>
           </div>
