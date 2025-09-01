@@ -11,6 +11,11 @@ export default defineType({
     defineField({ name: 'image', title: 'Cover Image', type: 'image', options: { hotspot: true } }),
     defineField({ name: 'lineup', title: 'Lineup', type: 'array', of: [{ type: 'string' }] }),
     defineField({ name: 'description', title: 'Description', type: 'text' }),
+    defineField({ name: 'ticketUrl', title: 'Ticket URL', type: 'url', description: 'Link to your ticketing provider' }),
+    defineField({ name: 'doorsOpen', title: 'Doors Open', type: 'string' }),
+    defineField({ name: 'lastEntry', title: 'Last Entry', type: 'string' }),
+    defineField({ name: 'ageRestriction', title: 'Age Restriction', type: 'string', initialValue: '18+' }),
+    defineField({ name: 'priceFrom', title: 'Price From (£)', type: 'number' }),
     defineField({ name: 'published', title: 'Published', type: 'boolean', initialValue: true })
   ]
 })
