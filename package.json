@@ -12,7 +12,7 @@
     "@sanity/vision": "3.44.0",
     "@sanity/image-url": "1.0.2",
     "next-sanity": "8.3.2",
-    "@portabletext/react": "3.0.22",
+    "@portabletext/react": "4.0.22",
     "clsx": "2.1.1",
     "date-fns": "3.6.0",
     "zustand": "4.4.1"
