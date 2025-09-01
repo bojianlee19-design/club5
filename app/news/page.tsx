@@ -3,24 +3,40 @@ import { sanityClient } from '@/lib/sanity.client'
 import { urlFor } from '@/lib/sanity.image'
 
 type Block = { _type?: string; children?: Array<{ _type?: string; text?: string }> }
-type News = { _id: string; title?: string; slug?: { current?: string }; image?: any; content?: Block[]; published?: boolean }
+type News = {
+  _id: string
+  title?: string
+  slug?: { current?: string }
+  image?: any
+  content?: Block[]
+  published?: boolean
+  date?: string // 可选：手动发布日期
+}
 
 export const revalidate = 60
 
-function excerpt(blocks?: Block[], maxLen = 140) {
+function excerpt(blocks?: Block[], maxLen = 160) {
   if (!blocks?.length) return ''
-  const texts: string[] = []
+  const out: string[] = []
   for (const b of blocks) {
-    if (b?._type === 'block') for (const c of (b.children || [])) if (c._type === 'span' && c.text) texts.push(c.text)
-    if (texts.join(' ').length >= maxLen) break
+    if (b?._type === 'block') {
+      for (const c of b.children || []) {
+        if (c._type === 'span' && c.text) out.push(c.text)
+        if (out.join(' ').length >= maxLen) break
+      }
+    }
+    if (out.join(' ').length >= maxLen) break
   }
-  const s = texts.join(' ').replace(/\s+/g,' ').trim()
+  const s = out.join(' ').replace(/\s+/g,' ').trim()
   return s.length > maxLen ? s.slice(0, maxLen) + '…' : s
 }
 
 export default async function NewsPage() {
   const items: News[] = await sanityClient.fetch(
-    `*[_type=="news" && published==true]|order(_createdAt desc){ _id, title, slug, image, content }`
+    `*[_type=="news" && published==true]
+     | order(coalesce(date,_createdAt) desc){
+        _id, title, slug, image, content, date
+      }`
   )
 
   return (
@@ -31,13 +47,15 @@ export default async function NewsPage() {
           const cover = n.image ? urlFor(n.image).width(1200).height(630).fit('crop').url() : null
           const sub = excerpt(n.content, 160)
           const href = n.slug?.current ? `/news/${n.slug.current}` : undefined
+          const date = n.date ? n.date : undefined
           return (
-            <article key={n._id} style={{ display:'grid', gap:12, gridTemplateColumns:'160px 1fr', alignItems:'start', border:'1px solid #222', borderRadius:12, padding:12, background:'#0b0b0b' }}>
+            <article key={n._id} style={{ display:'grid', gap:12, gridTemplateColumns:'220px 1fr', alignItems:'start', border:'1px solid #222', borderRadius:12, padding:12, background:'#0b0b0b' }}>
               <div style={{ borderRadius:8, overflow:'hidden', background:'#111', aspectRatio:'16/9' }}>
-                {cover ? <img src={cover} alt={n.title || 'News'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} /> : <div style={{ width:'100%', height:'100%', display:'grid', placeItems:'center', color:'#aaa' }}>No image</div>}
+                {cover ? <img src={cover} alt={n.title || 'News'} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', display:'grid', placeItems:'center', color:'#aaa' }}>No image</div>}
               </div>
               <div>
-                <h3 style={{ margin:'4px 0 8px', fontSize:18, fontWeight:800 }}>
+                {date && <div style={{ fontSize:12, opacity:.75, marginBottom:6 }}>{date}</div>}
+                <h3 style={{ margin:'4px 0 8px', fontSize:20, fontWeight:800 }}>
                   {href ? <Link href={href} style={{ color:'#fff', textDecoration:'none' }}>{n.title || 'Untitled'}</Link> : (n.title || 'Untitled')}
                 </h3>
                 {sub && <p style={{ margin:0, opacity:.85, lineHeight:1.5 }}>{sub}</p>}
