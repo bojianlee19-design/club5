@@ -1,206 +1,93 @@
 'use client'
+import {useEffect, useRef, useState} from 'react'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
-
-// 尽量兼容不同字段命名
-type AnyEvent = {
-  id?: string
-  _id?: string
-  title?: string
-  name?: string
-  slug?: string | { current?: string }
+type EventItem = {
+  id: string
+  title: string
+  slug?: string
   date?: string
-  startDate?: string
-  datetime?: string
   imageUrl?: string
-  bannerUrl?: string
-  cover?: string
-  poster?: string
-  mainImage?: { url?: string }
-}
-
-function pickTitle(e: AnyEvent) {
-  return e.title || e.name || 'Untitled'
-}
-function pickDate(e: AnyEvent) {
-  const raw = e.date || e.startDate || e.datetime
-  if (!raw) return ''
-  const d = new Date(raw)
-  if (isNaN(d.getTime())) return String(raw)
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-function pickSlug(e: AnyEvent) {
-  return (typeof e.slug === 'string' ? e.slug : e.slug?.current) || e._id || e.id || ''
-}
-function pickImg(e: AnyEvent) {
-  return (
-    e.imageUrl ||
-    e.bannerUrl ||
-    e.cover ||
-    e.poster ||
-    e.mainImage?.url ||
-    '/fallback-event.jpg'
-  )
 }
 
 export default function EventsRail() {
-  const [events, setEvents] = useState<AnyEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState<string | null>(null)
-  const railRef = useRef<HTMLDivElement>(null)
+  const [items, setItems] = useState<EventItem[]>([])
+  const railRef = useRef<HTMLDivElement|null>(null)
 
   useEffect(() => {
-    let dead = false
+    let alive = true
     ;(async () => {
       try {
-        setLoading(true)
-        const r = await fetch('/api/events', { cache: 'no-store' })
-        if (!r.ok) throw new Error('events api not ok')
-        const data = await r.json()
-        const list = Array.isArray(data) ? data : data?.items || []
-        if (!dead) setEvents(list)
-      } catch (e) {
-        console.error(e)
-        if (!dead) setErr('failed')
-      } finally {
-        if (!dead) setLoading(false)
-      }
+        const res = await fetch('/api/events', { cache: 'no-store' })
+        const json = await res.json()
+        if (alive) setItems(json || [])
+      } catch { /* ignore */ }
     })()
-    return () => {
-      dead = true
-    }
+    return () => { alive = false }
   }, [])
 
-  // 无缝循环
-  const doubled = useMemo(() => {
-    if (!events?.length) return []
-    return [...events, ...events]
-  }, [events])
-
-  // 自动滚动 + 拖拽
+  // 自动轮播（每 4.5s 滚一屏，末尾回到起点）
   useEffect(() => {
     const el = railRef.current
-    if (!el || !events.length) return
+    if (!el || items.length <= 1) return
+    const tick = () => {
+      const w = el.clientWidth
+      const nearEnd = el.scrollLeft + w*1.5 >= el.scrollWidth
+      el.scrollTo({ left: nearEnd ? 0 : el.scrollLeft + w, behavior: 'smooth' })
+    }
+    const id = setInterval(tick, 4500)
+    return () => clearInterval(id)
+  }, [items.length])
 
-    let raf = 0
-    let last = performance.now()
-    const speed = 0.35
-    const step = (t: number) => {
-      const dt = t - last
-      last = t
-      el.scrollLeft += speed * (dt / (1000 / 60))
-      if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft = 0
-      raf = requestAnimationFrame(step)
-    }
-    raf = requestAnimationFrame(step)
-
-    let isDown = false
-    let startX = 0
-    let startLeft = 0
-    const onDown = (e: MouseEvent | TouchEvent) => {
-      isDown = true
-      cancelAnimationFrame(raf)
-      const pageX = 'touches' in e ? e.touches[0].pageX : (e as MouseEvent).pageX
-      startX = pageX
-      startLeft = el.scrollLeft
-    }
-    const onMove = (e: MouseEvent | TouchEvent) => {
-      if (!isDown) return
-      const pageX = 'touches' in e ? e.touches[0].pageX : (e as MouseEvent).pageX
-      const dx = pageX - startX
-      el.scrollLeft = startLeft - dx
-    }
-    const onUp = () => {
-      if (!isDown) return
-      isDown = false
-      last = performance.now()
-      raf = requestAnimationFrame(step)
-    }
-    el.addEventListener('mousedown', onDown)
-    el.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    el.addEventListener('touchstart', onDown, { passive: true })
-    el.addEventListener('touchmove', onMove, { passive: true })
-    el.addEventListener('touchend', onUp)
-
-    return () => {
-      cancelAnimationFrame(raf)
-      el.removeEventListener('mousedown', onDown)
-      el.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      el.removeEventListener('touchstart', onDown)
-      el.removeEventListener('touchmove', onMove)
-      el.removeEventListener('touchend', onUp)
-    }
-  }, [events])
-
-  if (loading) {
-    return <div className="text-zinc-400 py-12">Loading events…</div>
-  }
-  if (err || !events.length) {
-    return <div className="text-zinc-400 py-12">No upcoming events yet.</div>
-  }
+  if (!items.length) return null
 
   return (
-    <div className="relative">
-      <div
-        ref={railRef}
-        className="overflow-x-auto whitespace-nowrap select-none no-scrollbar"
-        style={{ scrollBehavior: 'auto' }}
-      >
-        {doubled.map((e, idx) => {
-          const title = pickTitle(e)
-          const dateText = pickDate(e)
-          const slug = pickSlug(e)
-          const img = pickImg(e)
+    <section className="wrap">
+      <div className="bar">
+        <h2>What’s On</h2>
+        <a className="more" href="/events">View all</a>
+      </div>
+
+      <div className="rail" ref={railRef}>
+        {items.map(ev => {
+          const href = ev.slug ? `/events/${ev.slug}` : '#'
+          const day = ev.date ? new Date(ev.date).toLocaleDateString(undefined, { day:'2-digit' }) : ''
+          const mon = ev.date ? new Date(ev.date).toLocaleDateString(undefined, { month:'short', year:'numeric' }) : ''
           return (
-            <Link
-              key={`${slug}-${idx}`}
-              href={slug ? `/events/${slug}` : '#'}
-              className="inline-block align-top mr-4"
-              prefetch={false}
-            >
-              <article className="relative w-[320px] h-[420px] rounded-2xl overflow-hidden bg-[#0c0c0c]">
-                <div className="absolute inset-0">
-                  {/* 用原生 img，避免外域需要配置 next/image */}
-                  <img
-                    src={img}
-                    alt={title}
-                    loading="lazy"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  {dateText && (
-                    <div className="text-xs tracking-wide uppercase text-zinc-300 mb-1">{dateText}</div>
-                  )}
-                  <h3 className="text-xl font-semibold text-white leading-tight line-clamp-2">{title}</h3>
-                  <div className="mt-3 inline-flex items-center text-[13px] text-white/90 rounded-full bg-white/10 px-3 py-1 backdrop-blur">
-                    View Details →
-                  </div>
-                </div>
-              </article>
-            </Link>
+            <a key={ev.id} className="card" href={href}>
+              <div className="img">
+                {ev.imageUrl ? <img src={ev.imageUrl} alt={ev.title} /> : <div className="ph" />}
+                {day && <div className="badge">
+                  <div className="d">{day}</div>
+                  <div className="m">{mon}</div>
+                </div>}
+              </div>
+              <div className="meta">
+                <div className="title">{ev.title}</div>
+                <div className="link">View Details →</div>
+              </div>
+            </a>
           )
         })}
       </div>
 
-      {/* 两侧渐隐 */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0b0b0b] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0b0b0b] to-transparent" />
-
-      {/* 隐藏滚动条 */}
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
+      <style jsx>{`
+        .wrap{padding:40px 6vw 10px}
+        .bar{display:flex;align-items:end;justify-content:space-between;margin-bottom:16px}
+        h2{margin:0;font-size:clamp(22px,3.5vw,32px);color:#fff;font-weight:800}
+        .more{color:#fff;opacity:.9;text-decoration:underline}
+        .rail{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+        .rail::-webkit-scrollbar{height:6px}.rail::-webkit-scrollbar-thumb{background:#444;border-radius:3px}
+        .card{flex:0 0 320px;scroll-snap-align:start;border-radius:14px;overflow:hidden;background:#0b0b0b;border:1px solid #1f1f1f;color:#fff;text-decoration:none}
+        .img{position:relative;height:200px;background:#111}
+        .img img{width:100%;height:100%;object-fit:cover;display:block}
+        .ph{width:100%;height:100%;background:linear-gradient(180deg,#1b1b1b,#0f0f0f)}
+        .badge{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.7);border:1px solid #fff;border-radius:12px;padding:6px 8px;text-align:center;line-height:1}
+        .badge .d{font-weight:800;font-size:18px}
+        .badge .m{font-size:11px;opacity:.9}
+        .meta{padding:12px}
+        .title{font-weight:700;margin-bottom:6px}
+        .link{opacity:.9;text-decoration:underline}
       `}</style>
-    </div>
+    </section>
   )
 }
