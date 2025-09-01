@@ -1,27 +1,74 @@
-type Post = { id:string; title:string; date:string; body?:string; coverUrl?:string }
-async function fetchPosts(): Promise<Post[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/news`, { cache: 'no-store' })
-  const data = await res.json()
-  return data.posts as Post[]
+import { sanityClient } from '@/lib/sanity.client'
+import { urlFor } from '@/lib/sanity.image'
+
+type Block = {
+  _type?: string
+  children?: Array<{ _type?: string; text?: string }>
+}
+type News = {
+  _id: string
+  title?: string
+  slug?: { current?: string }
+  image?: any
+  content?: Block[]
+  published?: boolean
 }
 
-export default async function NewsList() {
-  const posts = await fetchPosts()
+export const revalidate = 60
+
+// 提取富文本的纯文本摘要（不依赖额外库，足够列表页使用）
+function excerpt(blocks?: Block[], maxLen = 140) {
+  if (!blocks || blocks.length === 0) return ''
+  const texts: string[] = []
+  for (const b of blocks) {
+    if (b?._type === 'block' && Array.isArray(b.children)) {
+      for (const span of b.children) {
+        if (span?._type === 'span' && span.text) texts.push(span.text)
+      }
+    }
+    if (texts.length >= maxLen) break
+  }
+  const joined = texts.join(' ').trim().replace(/\s+/g, ' ')
+  return joined.length > maxLen ? joined.slice(0, maxLen) + '…' : joined
+}
+
+export default async function NewsPage() {
+  const items: News[] = await sanityClient.fetch(
+    `*[_type=="news" && published==true]|order(_createdAt desc){
+      _id, title, slug, image, content, published
+    }`
+  )
+
   return (
-    <div className="container-max py-12 space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold">News & Features</h1>
-        <p className="text-white/70">What’s happening, and what’s next.</p>
+    <main style={{ minHeight:'100vh', color:'#fff', background:'#000', padding:24, fontFamily:'ui-sans-serif, system-ui' }}>
+      <h1 style={{ fontSize:28, fontWeight:700, marginBottom:16 }}>News</h1>
+
+      {(!items || items.length === 0) && (
+        <p style={{ opacity:.7 }}>No news yet.</p>
+      )}
+
+      <div style={{ display:'grid', gap:16 }}>
+        {items?.map((n) => {
+          const cover = n.image ? urlFor(n.image).width(1200).height(630).fit('crop').url() : null
+          const sub = excerpt(n.content, 160)
+          // 如需详情页，可把 <article> 改成 <a href={`/news/${n.slug?.current || n._id}`}> 包裹
+          return (
+            <article key={n._id} style={{ display:'grid', gap:12, gridTemplateColumns:'160px 1fr', alignItems:'start', border:'1px solid #222', borderRadius:12, padding:12, background:'#0b0b0b' }}>
+              <div style={{ borderRadius:8, overflow:'hidden', background:'#111', aspectRatio:'16/9' }}>
+                {cover ? (
+                  <img src={cover} alt={n.title || 'News'} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                ) : (
+                  <div style={{ width:'100%', height:'100%', display:'grid', placeItems:'center', color:'#aaa' }}>No image</div>
+                )}
+              </div>
+              <div>
+                <h3 style={{ margin:'4px 0 8px', fontSize:18, fontWeight:700 }}>{n.title || 'Untitled'}</h3>
+                {sub && <p style={{ margin:0, opacity:.85, lineHeight:1.5 }}>{sub}</p>}
+              </div>
+            </article>
+          )
+        })}
       </div>
-      <div className="space-y-4">
-        {posts.map(p => (
-          <a key={p.id} href={`/news/${p.id}`} className="card p-6 block">
-            <div className="text-white/50 text-sm">{new Date(p.date).toLocaleDateString()}</div>
-            <div className="text-xl font-semibold">{p.title}</div>
-            {p.body && <p className="text-white/70 line-clamp-2">{p.body}</p>}
-          </a>
-        ))}
-      </div>
-    </div>
+    </main>
   )
 }
