@@ -1,79 +1,101 @@
-'use client'
-import {useEffect, useRef, useState} from 'react'
+// components/VideoHero.tsx
+'use client';
+
+import * as React from 'react';
+
+type SourceItem = string | { src: string; type?: string };
 
 type Props = {
-  sources: string[]   // 例 ['/hero.webm', '/hero.mp4']
-  poster?: string
-  heading: string
-  subheading?: string
-  cta?: { href: string; label: string }
-}
+  sources: SourceItem[];                    // 既支持 '/a.mp4' 也支持 {src,type}
+  poster?: string;
+  heading: string;
+  subheading?: string;
+  cta?: { href: string; label: string };
+};
 
-export default function VideoHero({ sources, poster, heading, subheading, cta }: Props) {
-  const ref = useRef<HTMLVideoElement|null>(null)
-  const [failed, setFailed] = useState(false)
+export default function VideoHero({
+  sources,
+  poster,
+  heading,
+  subheading,
+  cta,
+}: Props) {
+  // 规范化成 {src,type}
+  const normalized = sources.map((s) =>
+    typeof s === 'string'
+      ? {
+          src: s,
+          type: s.endsWith('.webm')
+            ? 'video/webm'
+            : s.endsWith('.mp4')
+            ? 'video/mp4'
+            : undefined,
+        }
+      : s
+  );
 
-  useEffect(() => {
-    const v = ref.current
-    if (!v) return
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  // iOS/Safari 等浏览器需要 muted+playsInline 才能自动播放；若失败再尝试 play()
+  React.useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
     const tryPlay = async () => {
       try {
-        await v.play()
+        await v.play();
       } catch {
-        // 某些浏览器第一时间会拒绝，等 meta/loadeddata 再试
-        const onLoaded = async () => {
-          try { await v.play() } catch { /* ignore */ }
-          v.removeEventListener('loadeddata', onLoaded)
-          v.removeEventListener('loadedmetadata', onLoaded)
-        }
-        v.addEventListener('loadeddata', onLoaded)
-        v.addEventListener('loadedmetadata', onLoaded)
+        // 自动播放受阻时，不再报错，由浏览器显示控件
+        v.controls = true;
       }
-    }
-    tryPlay()
-  }, [])
+    };
+
+    // 确保 muted 才能自动播放
+    v.muted = true;
+    v.playsInline = true;
+    tryPlay();
+  }, []);
 
   return (
-    <section className="hero">
-      {!failed ? (
-        <video
-          ref={ref}
-          className="hero-video"
-          muted
-          playsInline
-          loop
-          autoPlay
-          preload="auto"
-          poster={poster}
-          onError={() => setFailed(true)}
-        >
-          {sources.map((src, i) => (
-            <source key={i} src={src} type={src.endsWith('.webm') ? 'video/webm' : 'video/mp4'} />
-          ))}
-        </video>
-      ) : (
-        <div className="hero-fallback" style={poster ? { backgroundImage: `url(${poster})` } : undefined}/>
-      )}
+    <section className="relative h-[80vh] min-h-[560px] w-full overflow-hidden">
+      {/* 背景视频 */}
+      <video
+        ref={videoRef}
+        className="absolute inset-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        poster={poster}
+      >
+        {normalized.map((s, i) => (
+          <source key={i} src={s.src} type={s.type} />
+        ))}
+        {/* 旧浏览器兜底文案 */}
+        您的浏览器不支持 HTML5 视频。
+      </video>
 
-      <div className="hero-overlay">
-        <h1>{heading}</h1>
-        {subheading && <p className="sub">{subheading}</p>}
-        {cta && <a href={cta.href} className="btn">{cta.label}</a>}
+      {/* 顶部黑色渐变遮罩，让标题更清晰 */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
+
+      {/* 前景文字与按钮 */}
+      <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-start justify-end gap-4 px-6 pb-14 text-white">
+        <h1 className="text-4xl font-extrabold tracking-tight md:text-6xl">
+          {heading}
+        </h1>
+        {subheading ? (
+          <p className="text-lg opacity-90 md:text-2xl">{subheading}</p>
+        ) : null}
+        {cta ? (
+          <a
+            href={cta.href}
+            className="mt-2 inline-flex items-center rounded-full bg-white/10 px-6 py-3 text-sm font-semibold ring-1 ring-white/30 backdrop-blur hover:bg-white/20"
+          >
+            {cta.label}
+          </a>
+        ) : null}
       </div>
-
-      <style jsx>{`
-        .hero{position:relative;min-height:72vh;background:#000;overflow:hidden}
-        .hero-video,.hero-fallback{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background-size:cover;background-position:center}
-        .hero-overlay{
-          position:relative;z-index:2;display:flex;flex-direction:column;gap:12px;
-          padding:22vh 6vw 12vh;background:linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.35) 35%,rgba(0,0,0,.2) 60%,transparent 100%);
-          color:#fff;max-width:1200px;margin:0 auto
-        }
-        h1{font-size:clamp(32px,6vw,72px);line-height:1.05;margin:0;font-weight:800;letter-spacing:.01em}
-        .sub{opacity:.92;font-size:clamp(14px,2.5vw,18px);margin:4px 0 10px}
-        .btn{display:inline-block;padding:10px 18px;border:1px solid #fff;border-radius:999px;color:#000;background:#fff;text-decoration:none;font-weight:600}
-        .btn:hover{opacity:.9}
-      `}</style>
     </section>
-  )
+  );
 }
