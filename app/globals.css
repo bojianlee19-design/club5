@@ -1,36 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --bg: #0a0a0a;
-  --fg: #f5f5f5;
-  --primary: #FF3B2F;
-  --secondary: #FF8A00;
-  --accent: #FFD1A3;
-}
-
-html, body {
-  background: var(--bg);
-  color: var(--fg);
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.container-max { @apply max-w-6xl mx-auto px-4; }
-.card { @apply bg-black/40 backdrop-blur rounded-2xl shadow-soft border border-white/10; }
-.btn { @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 font-medium; }
-.btn-primary {
-  background-image: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: black;
-}
-.btn-outline { @apply border border-white/20 text-white hover:bg-white/10; }
-.nav-link { @apply text-sm md:text-base hover:opacity-80 transition-opacity; }
-input, textarea, select { @apply bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none text-white; }
-label { @apply text-sm text-white/70; }
-form .row { @apply grid grid-cols-1 md:grid-cols-2 gap-4; }
-hr { @apply border-white/10; }
+/* Minimal global reset & helpers */
+*{box-sizing:border-box} html,body{padding:0;margin:0;background:#000;color:#fff}
+a{color:inherit}
+img{display:block;max-width:100%;height:auto}
