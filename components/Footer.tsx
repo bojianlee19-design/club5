@@ -1,30 +1,91 @@
+// components/Footer.tsx
+import Link from 'next/link'
+import { BRAND } from '@/brand.config'
+
 export default function Footer() {
+  const fullAddress = `${BRAND.addressLine}, ${BRAND.city} ${BRAND.postcode}`
+
   return (
-    <footer className="border-t border-white/10 bg-black/40">
-      <div className="container-max py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="border-t border-white/10 bg-black text-white">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-10 grid gap-8 md:grid-cols-3">
         <div>
-          <div className="text-xl font-semibold gradient-text">HAZY CLUB</div>
-          <p className="text-white/70 mt-2">28 Eyre St, Sheffield City Centre, Sheffield S1 4QY</p>
-          <p className="text-white/50 text-sm mt-2">© {new Date().getFullYear()} HAZY Club. All rights reserved.</p>
+          <h4 className="text-sm uppercase tracking-widest text-white/60 mb-3">
+            Visit us
+          </h4>
+          <p className="text-white/90 leading-relaxed">
+            {fullAddress}
+            <br />
+            <Link
+              href={BRAND.mapUrl}
+              target="_blank"
+              className="underline underline-offset-4 hover:text-white"
+            >
+              Open in Maps →
+            </Link>
+          </p>
         </div>
+
         <div>
-          <div className="font-semibold mb-2">Links</div>
-          <ul className="space-y-1 text-white/70">
-            <li><a href="/tickets">Tickets</a></li>
-            <li><a href="/vip">VIP</a></li>
-            <li><a href="/venue-hire">Venue Hire</a></li>
-            <li><a href="/news">News</a></li>
-            <li><a href="/faq">FAQ</a></li>
+          <h4 className="text-sm uppercase tracking-widest text-white/60 mb-3">
+            Contact
+          </h4>
+          <p className="text-white/90">
+            {BRAND.email ? (
+              <a href={`mailto:${BRAND.email}`} className="hover:underline">
+                {BRAND.email}
+              </a>
+            ) : (
+              '—'
+            )}
+            <br />
+            {BRAND.phone ? <span>{BRAND.phone}</span> : null}
+          </p>
+        </div>
+
+        <div>
+          <h4 className="text-sm uppercase tracking-widest text-white/60 mb-3">
+            Follow
+          </h4>
+          <ul className="space-y-1 text-white/90">
+            {BRAND.socials.instagram && (
+              <li>
+                <a
+                  href={BRAND.socials.instagram}
+                  target="_blank"
+                  className="hover:underline"
+                >
+                  Instagram
+                </a>
+              </li>
+            )}
+            {BRAND.socials.tiktok && (
+              <li>
+                <a
+                  href={BRAND.socials.tiktok}
+                  target="_blank"
+                  className="hover:underline"
+                >
+                  TikTok
+                </a>
+              </li>
+            )}
+            {BRAND.socials.facebook && (
+              <li>
+                <a
+                  href={BRAND.socials.facebook}
+                  target="_blank"
+                  className="hover:underline"
+                >
+                  Facebook
+                </a>
+              </li>
+            )}
           </ul>
         </div>
-        <div>
-          <div className="font-semibold mb-2">Newsletter</div>
-          <form action="/api/newsletter" method="post" className="flex gap-2">
-            <input className="flex-1" type="email" name="email" placeholder="you@example.com" required />
-            <button className="btn btn-primary" type="submit">Sign Up</button>
-          </form>
-          <p className="text-white/50 text-xs mt-2">We respect your privacy.</p>
-        </div>
+      </div>
+
+      <div className="border-t border-white/10 text-center text-white/60 text-sm py-4">
+        © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
       </div>
     </footer>
   )
