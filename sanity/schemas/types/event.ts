@@ -11,11 +11,24 @@ export default defineType({
     defineField({ name: 'image', title: 'Cover Image', type: 'image', options: { hotspot: true } }),
     defineField({ name: 'lineup', title: 'Lineup', type: 'array', of: [{ type: 'string' }] }),
     defineField({ name: 'description', title: 'Description', type: 'text' }),
+
+    // 票务 / 展示
     defineField({ name: 'ticketUrl', title: 'Ticket URL', type: 'url', description: 'Link to your ticketing provider' }),
+    defineField({ name: 'priceFrom', title: 'Price From (£)', type: 'number' }),
+    defineField({ name: 'ageRestriction', title: 'Age Restriction', type: 'string', initialValue: '18+' }),
     defineField({ name: 'doorsOpen', title: 'Doors Open', type: 'string' }),
     defineField({ name: 'lastEntry', title: 'Last Entry', type: 'string' }),
-    defineField({ name: 'ageRestriction', title: 'Age Restriction', type: 'string', initialValue: '18+' }),
-    defineField({ name: 'priceFrom', title: 'Price From (£)', type: 'number' }),
+
+    // 新增：售罄 & 风格标签（用于过滤）
+    defineField({ name: 'soldOut', title: 'Sold Out', type: 'boolean', initialValue: false }),
+    defineField({
+      name: 'genres',
+      title: 'Genres',
+      type: 'array',
+      of: [{ type: 'string' }],
+      options: { layout: 'tags' }
+    }),
+
     defineField({ name: 'published', title: 'Published', type: 'boolean', initialValue: true })
   ]
 })
