@@ -9,12 +9,15 @@ export default function HomePage() {
     <>
       {/* 英雄区：优先 webm，其次 mp4；若 mp4 还没修好会自动回退到 poster */}
       <VideoHero
-        sources={['/hero.webm','/hero.mp4']}
-        poster="/hero-poster.jpg"
-        heading="HAZY CLUB"
-        subheading="NIGHTS · MUSIC · COMMUNITY"
-        cta={{ href: '/tickets', label: 'Get Tickets' }}
-      />
+  sources={[
+    { src: '/hero-a.webm?v=1', type: 'video/webm' },
+    { src: '/hero-a.mp4?v=1',  type: 'video/mp4'  },
+  ]}
+  poster="/hero-poster.jpg"
+  heading="HAZY CLUB"
+  subheading="NIGHTS · MUSIC · COMMUNITY"
+  cta={{ href: '/tickets', label: 'Get Tickets' }}
+/>
 
       {/* 活动横向滑动 */}
       <EventsRail />
