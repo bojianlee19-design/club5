@@ -11,6 +11,11 @@ type EventDoc = {
   description?: string
   image?: any
   slug?: { current?: string }
+  ticketUrl?: string
+  doorsOpen?: string
+  lastEntry?: string
+  ageRestriction?: string
+  priceFrom?: number
 }
 
 export const revalidate = 60
@@ -24,7 +29,10 @@ export async function generateStaticParams() {
 
 async function getEvent(slug: string): Promise<EventDoc | null> {
   const doc = await sanityClient.fetch(
-    `*[_type=="event" && slug.current==$slug][0]{ _id,title,date,lineup,description,image,slug }`,
+    `*[_type=="event" && slug.current==$slug][0]{
+      _id,title,date,lineup,description,image,slug,
+      ticketUrl,doorsOpen,lastEntry,ageRestriction,priceFrom
+    }`,
     { slug }
   )
   return doc || null
@@ -50,10 +58,24 @@ export default async function EventDetail({ params }: { params: { slug: string }
           {doc.lineup?.length ? <div style={{ marginBottom:12, opacity:.9 }}>{doc.lineup.join(' · ')}</div> : null}
           {doc.description && <p style={{ margin:0, lineHeight:1.6, opacity:.95 }}>{doc.description}</p>}
 
-          <div style={{ marginTop:16, display:'flex', gap:12 }}>
-            <a href="/events" className="btn" style={{ padding:'10px 14px', border:'1px solid #333', borderRadius:999 }}>Back to Events</a>
-            <a href="#" className="btn" style={{ padding:'10px 14px', borderRadius:999, background:'#9A7BFF', color:'#000', fontWeight:800 }}>Get Tickets</a>
+          <div style={{ marginTop:16, display:'flex', gap:12, flexWrap:'wrap' }}>
+            <Link href="/events" className="btn btn-ghost" style={{ padding:'10px 14px' }}>Back to Events</Link>
+            {doc.ticketUrl ? (
+              <a href={doc.ticketUrl} target="_blank" rel="noreferrer"
+                 className="btn btn-primary" style={{ padding:'10px 14px' }}>
+                Buy Tickets
+              </a>
+            ) : (
+              <a href="/tickets" className="btn btn-primary" style={{ padding:'10px 14px' }}>Buy Tickets</a>
+            )}
           </div>
+
+          <ul style={{ marginTop:12, display:'grid', gap:6, color:'#bbb', paddingLeft:18 }}>
+            {doc.doorsOpen && <li>Doors: {doc.doorsOpen}</li>}
+            {doc.lastEntry && <li>Last Entry: {doc.lastEntry}</li>}
+            {doc.ageRestriction && <li>Age: {doc.ageRestriction}</li>}
+            {typeof doc.priceFrom === 'number' && <li>From: £{doc.priceFrom.toFixed(2)}</li>}
+          </ul>
         </div>
       </section>
     </main>
