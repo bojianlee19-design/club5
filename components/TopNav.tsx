@@ -2,7 +2,11 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils'; // 如果你没有这个工具函数，可把 cn 换成模板字符串
+
+// 简易 cn：把真假不一的 class 合并
+function cn(...classes: Array<string | false | undefined | null>) {
+  return classes.filter(Boolean).join(' ');
+}
 
 export default function TopNav() {
   const [open, setOpen] = useState(false);
@@ -10,22 +14,18 @@ export default function TopNav() {
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 8);
-    h(); window.addEventListener('scroll', h);
+    h();
+    window.addEventListener('scroll', h);
     return () => window.removeEventListener('scroll', h);
   }, []);
 
   return (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-50">
-      <div
-        className={cn(
-          'mx-auto w-full max-w-7xl px-4 transition-all',
-          scrolled ? 'py-3' : 'py-5'
-        )}
-      >
+      <div className={cn('mx-auto w-full max-w-7xl px-4 transition-all', scrolled ? 'py-3' : 'py-5')}>
         <div className="pointer-events-auto mx-auto w-fit rounded-full bg-black/50 px-5 py-2 text-sm tracking-wide text-white backdrop-blur">
           <button
             aria-expanded={open}
-            onClick={() => setOpen(v => !v)}
+            onClick={() => setOpen((v) => !v)}
             className="mr-5 font-semibold uppercase hover:opacity-80"
           >
             Menu
@@ -39,7 +39,7 @@ export default function TopNav() {
           </Link>
         </div>
 
-        {/* 下拉菜单（不是弹窗） */}
+        {/* 下拉菜单（非弹窗） */}
         <div
           className={cn(
             'pointer-events-auto mx-auto mt-2 w-full max-w-3xl overflow-hidden rounded-2xl bg-black/70 text-white backdrop-blur transition-[max-height,opacity]',
