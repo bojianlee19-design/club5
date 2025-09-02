@@ -6,10 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const events = await getEvents(); // 旧名 fetchEvents -> 新名 getEvents
-    return NextResponse.json(events);
-  } catch (err) {
-    console.error('GET /api/events error:', err);
-    return NextResponse.json({ error: 'Failed to load events' }, { status: 500 });
+    const items = await getEvents();
+    return NextResponse.json(items, { status: 200 });
+  } catch (e) {
+    console.error('GET /api/events failed:', e);
+    return NextResponse.json({ error: 'failed to load events' }, { status: 500 });
   }
 }
