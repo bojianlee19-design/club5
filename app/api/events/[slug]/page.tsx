@@ -1,49 +1,73 @@
-// app/events/[slug]/page.tsx
+// app/api/events/[slug]/page.tsx
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { fetchEventBySlug } from '@/lib/sanity';
+import { getEventBySlug } from '@/lib/sanity'; // 旧名 fetchEventBySlug -> 新名 getEventBySlug
 
 export const dynamic = 'force-dynamic';
 
-export default async function EventPage({ params }: { params: { slug: string } }) {
-  const ev = await fetchEventBySlug(params.slug);
-  if (!ev) return notFound();
+type PageProps = {
+  params: { slug: string };
+};
 
-  const dateStr = ev.date ? new Date(ev.date).toLocaleString() : '';
+export default async function EventDetailPage({ params }: PageProps) {
+  const { slug } = params;
+
+  let event: any;
+  try {
+    event = await getEventBySlug(slug);
+  } catch (e) {
+    console.error('getEventBySlug failed:', e);
+  }
+
+  if (!event) {
+    notFound();
+  }
 
   return (
-    <main style={{ color: '#fff' }}>
-      <section
-        style={{
-          minHeight: '50vh',
-          display: 'grid',
-          placeItems: 'center',
-          background: `#000 url(${ev.cover?.asset?.url || ''}) center/cover no-repeat`,
-          borderBottom: '1px solid rgba(255,255,255,.1)',
-        }}
-      >
-        <div style={{ background: 'rgba(0,0,0,.55)', padding: 16, borderRadius: 12 }}>
-          <h1 style={{ margin: 0 }}>{ev.title}</h1>
-          <p style={{ margin: '6px 0 0', opacity: .85 }}>{dateStr}</p>
-        </div>
-      </section>
+    <main className="mx-auto max-w-3xl px-4 py-10 text-white">
+      <Link href="/events" className="mb-6 inline-block text-sm underline">
+        ← Back to What’s On
+      </Link>
 
-      <section style={{ maxWidth: 900, margin: '32px auto', padding: '0 16px' }}>
-        <p style={{ lineHeight: 1.7, opacity: .9 }}>{ev.summary || ''}</p>
-        <div style={{ marginTop: 24 }}>
-          <Link href="/tickets" style={cta}>Get Tickets</Link>
+      <h1 className="mb-2 text-3xl font-bold">{event.title}</h1>
+      {event.date && (
+        <p className="mb-4 text-neutral-300">
+          {new Date(event.date).toLocaleString('en-GB', {
+            weekday: 'short',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </p>
+      )}
+
+      {event.coverImage?.url && (
+        // 如果你已经有 sanity.image() 工具，这里可换成 <Image />
+        <img
+          src={event.coverImage.url}
+          alt={event.title}
+          className="mb-6 w-full rounded-2xl object-cover"
+        />
+      )}
+
+      {Array.isArray(event.lineup) && event.lineup.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-2 text-xl font-semibold">Line-up</h2>
+          <ul className="list-inside list-disc text-neutral-200">
+            {event.lineup.map((name: string, i: number) => (
+              <li key={i}>{name}</li>
+            ))}
+          </ul>
         </div>
-      </section>
+      )}
+
+      {event.description && (
+        <div className="prose prose-invert">
+          <p>{event.description}</p>
+        </div>
+      )}
     </main>
   );
 }
-
-const cta: React.CSSProperties = {
-  display: 'inline-block',
-  color: '#000',
-  background: '#fff',
-  borderRadius: 10,
-  padding: '10px 16px',
-  textDecoration: 'none',
-  fontWeight: 700,
-};
