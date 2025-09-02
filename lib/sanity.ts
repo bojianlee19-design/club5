@@ -1,28 +1,40 @@
 // lib/sanity.ts
-/**
- * 极简 Sanity HTTP API 封装。
- * - 公共 dataset 可不带 token。
- * - 私有 dataset 需在 Vercel 配置 SANITY_READ_TOKEN（只读 token）。
- */
-export async function sanityFetch<T = any>(query: string): Promise<T> {
-  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
-  const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production'
-  if (!projectId) return [] as unknown as T
+import { createClient } from '@sanity/client';
 
-  const url = new URL(`https://${projectId}.api.sanity.io/v2023-10-01/data/query/${dataset}`)
-  url.searchParams.set('query', query)
+export const sanityClient = createClient({
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
+  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
+  apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2025-01-01',
+  useCdn: true,
+});
 
-  const token = process.env.SANITY_READ_TOKEN
-  const res = await fetch(url.toString(), {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    cache: 'no-store',
-  })
+export type EventDoc = {
+  _id: string;
+  title: string;
+  date?: string;
+  slug?: { current: string };
+  cover?: { asset?: { url?: string } };
+  summary?: string;
+};
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`Sanity fetch failed: ${res.status} ${res.statusText} ${text}`)
-  }
+export async function fetchEvents(limit = 12) {
+  const q = `*[_type=="event"] | order(date asc) [0...$limit]{
+    _id, title, date, slug, cover{asset->{url}}, summary
+  }`;
+  const rows: EventDoc[] = await sanityClient.fetch(q, { limit });
+  return rows.map((r) => ({
+    _id: r._id,
+    title: r.title,
+    date: r.date,
+    slug: r.slug?.current || r._id,         // 回退 _id，保证可点进
+    coverUrl: r.cover?.asset?.url || '',
+    summary: r.summary || '',
+  }));
+}
 
-  const json = await res.json()
-  return json.result as T
+export async function fetchEventBySlug(slug: string) {
+  const q = `*[_type=="event" && (slug.current==$s OR _id==$s)][0]{
+    _id, title, date, slug, cover{asset->{url}}, summary, body
+  }`;
+  return sanityClient.fetch(q, { s: slug });
 }
