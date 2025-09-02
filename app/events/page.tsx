@@ -1,54 +1,45 @@
+// app/events/page.tsx
 import Link from 'next/link';
-import Image from 'next/image';
+import EventCardWide from '@/components/EventCardWide';
 import { getUpcomingEvents } from '@/lib/sanity';
 
-export const dynamic = 'force-dynamic';
+// 事件页希望定期更新，不吃老缓存
+export const revalidate = 60;
 
 export default async function EventsPage() {
-  const docs = await getUpcomingEvents(24);
-
-  const events = docs.map(d => ({
-    id: d._id,
-    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current ?? '',
-    title: d.title ?? '',
-    date: d.date,
-    cover: d.cover ?? '',
-  })).filter(e => e.slug);
+  // 直接从 Sanity 取，slug 已是 string、cover 已兜底为 string|undefined
+  const events = await getUpcomingEvents(24);
 
   return (
     <main className="mx-auto max-w-7xl bg-black px-4 pb-20 pt-24 text-white">
-      <h1 className="mb-8 text-4xl font-extrabold tracking-wide">What’s On</h1>
+      <header className="mb-8 flex items-end justify-between">
+        <h1 className="text-3xl font-extrabold tracking-wide md:text-4xl">
+          What’s On
+        </h1>
+        <Link
+          href="/"
+          className="text-sm underline underline-offset-4 opacity-80 hover:opacity-100"
+        >
+          ← Back to home
+        </Link>
+      </header>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {events.map(e => (
-          <Link
-            key={e.id}
-            href={`/events/${e.slug}`}
-            className="group rounded-2xl border border-white/10 bg-white/5"
-          >
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-2xl">
-              {e.cover ? (
-                <Image
-                  src={e.cover}
-                  alt={e.title}
-                  fill
-                  className="object-cover transition duration-300 group-hover:scale-105"
-                  sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-white/60">
-                  {e.title}
-                </div>
-              )}
-            </div>
-            <div className="space-y-1 p-4">
-              <div className="text-lg font-bold">{e.title}</div>
-              {e.date && <div className="text-sm text-white/70">{new Date(e.date).toLocaleString()}</div>}
-              <div className="pt-2 text-sm font-semibold text-white/80 group-hover:underline">View Details →</div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {events.length === 0 ? (
+        <p className="opacity-70">No events yet. Check back soon.</p>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {events.map((e) => (
+            <EventCardWide
+              key={e._id}
+              slug={e.slug}               // e.slug 已是 string
+              title={e.title}
+              date={e.date}
+              // 组件若把 cover 定义为可选，这里直接传；若定义为 string，就用 || '' 兜底
+              cover={e.cover || undefined}
+            />
+          ))}
+        </div>
+      )}
     </main>
   );
 }
