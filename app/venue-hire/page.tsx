@@ -1,13 +1,8 @@
-export default function VenueHire() {
+export default function Page() {
   return (
-    <main style={{ minHeight:'60vh', background:'#000', color:'#fff', display:'grid', placeItems:'center' }}>
-      <div style={{ textAlign:'center', maxWidth:680, padding:'0 16px' }}>
-        <h1 style={{ fontSize:28, fontWeight:900, marginBottom:10 }}>Venue Hire</h1>
-        <p style={{ opacity:.85 }}>
-          Host your next event at Hazy Club. For private hire and brand takeovers, email
-          {' '}<a href="mailto:hire@hazy.club" style={{ textDecoration:'underline' }}>hire@hazy.club</a>.
-        </p>
-      </div>
+    <main className="max-w-4xl mx-auto px-4 py-16">
+      <h1 className="text-3xl font-black mb-4">Venue Hire</h1>
+      <p className="text-white/80">Add your venue hire information here…</p>
     </main>
-  )
+  );
 }
