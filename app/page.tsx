@@ -23,7 +23,18 @@ export default async function HomePage() {
 
       {/* 英雄下方：自动滚动活动（居中、悬停暂停） */}
       <section className="mx-auto w-full max-w-7xl px-4">
-        <EventsAutoScroller events={events} durationSec={28} />
+      // 假设上面已有：const events = await getUpcomingEvents(12)
+
+const scrollerItems = events.map((d) => ({
+  id: d._id ?? (typeof d.slug === 'string' ? d.slug : d.slug?.current) ?? d.title ?? '',
+  slug: typeof d.slug === 'string' ? d.slug : d.slug?.current ?? '',
+  title: d.title ?? '',
+  date: d.date,
+  cover: d.cover ?? '', // 这里 d.cover 需是可直接 <Image src> 的完整 URL
+}))
+
+<EventsAutoScroller events={scrollerItems} durationSec={28} />
+
       </section>
 
       {/* 轨道式横向滚动 + 左右按钮（可选，二选一都行） */}
