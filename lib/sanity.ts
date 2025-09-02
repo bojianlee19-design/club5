@@ -13,28 +13,50 @@ export type EventDoc = {
   title: string;
   slug?: { current: string };
   date?: string;
-  coverUrl?: string;
+  /** 我们同时提供两个字段，以兼容不同组件的使用 */
+  coverUrl?: string; // 新字段
+  cover?: string;    // 兼容旧组件用到的 ev.cover
   description?: string;
   lineup?: string[];
 };
 
-// 统一查询：拿到列表（带封面 URL）
+/** 所有活动（按日期升序） */
 export async function getEvents(): Promise<EventDoc[]> {
   const q = groq`*[_type == "event"] | order(date asc){
     _id,
     title,
     slug,
     date,
-    "coverUrl": coalesce(coverImage.asset->url, image.asset->url)
+    // 同时返回 coverUrl 与 cover，指向同一个 asset url
+    "coverUrl": coalesce(coverImage.asset->url, image.asset->url),
+    "cover":    coalesce(coverImage.asset->url, image.asset->url)
   }`;
   return await client.fetch(q);
 }
 
-// 详情按 slug
+/** 仅未来活动（homepage/what's on 常用） */
+export async function getUpcomingEvents(): Promise<EventDoc[]> {
+  const q = groq`*[_type == "event" && defined(date) && dateTime(date) >= dateTime(now())]
+    | order(date asc){
+      _id,
+      title,
+      slug,
+      date,
+      "coverUrl": coalesce(coverImage.asset->url, image.asset->url),
+      "cover":    coalesce(coverImage.asset->url, image.asset->url)
+    }`;
+  return await client.fetch(q);
+}
+
+/** 详情：按 slug 获取 */
 export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
   const q = groq`*[_type == "event" && slug.current == $slug][0]{
-    _id, title, slug, date,
+    _id,
+    title,
+    slug,
+    date,
     "coverUrl": coalesce(coverImage.asset->url, image.asset->url),
+    "cover":    coalesce(coverImage.asset->url, image.asset->url),
     description,
     lineup
   }`;
@@ -42,6 +64,6 @@ export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
   return data || null;
 }
 
-/** ——兼容旧命名（避免其它文件还在用旧函数名导致编译失败）—— */
+/** ——向后兼容旧命名（防止别处还在引用）—— */
 export const fetchEvents = getEvents;
 export const fetchEventBySlug = getEventBySlug;
