@@ -13,7 +13,7 @@ export type EventDoc = {
   title: string;
   slug?: { current: string };
   date?: string;
-  /** 我们同时提供两个字段，以兼容不同组件的使用 */
+  /** 同时提供两个字段，兼容不同组件 */
   coverUrl?: string; // 新字段
   cover?: string;    // 兼容旧组件用到的 ev.cover
   description?: string;
@@ -27,15 +27,14 @@ export async function getEvents(): Promise<EventDoc[]> {
     title,
     slug,
     date,
-    // 同时返回 coverUrl 与 cover，指向同一个 asset url
     "coverUrl": coalesce(coverImage.asset->url, image.asset->url),
     "cover":    coalesce(coverImage.asset->url, image.asset->url)
   }`;
   return await client.fetch(q);
 }
 
-/** 仅未来活动（homepage/what's on 常用） */
-export async function getUpcomingEvents(): Promise<EventDoc[]> {
+/** 仅未来活动；支持可选 limit（例如 getUpcomingEvents(24)） */
+export async function getUpcomingEvents(limit?: number): Promise<EventDoc[]> {
   const q = groq`*[_type == "event" && defined(date) && dateTime(date) >= dateTime(now())]
     | order(date asc){
       _id,
@@ -45,7 +44,8 @@ export async function getUpcomingEvents(): Promise<EventDoc[]> {
       "coverUrl": coalesce(coverImage.asset->url, image.asset->url),
       "cover":    coalesce(coverImage.asset->url, image.asset->url)
     }`;
-  return await client.fetch(q);
+  const list: EventDoc[] = await client.fetch(q);
+  return typeof limit === 'number' ? list.slice(0, limit) : list;
 }
 
 /** 详情：按 slug 获取 */
