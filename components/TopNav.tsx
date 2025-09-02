@@ -1,70 +1,49 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-
-// 简易 cn：把真假不一的 class 合并
-function cn(...classes: Array<string | false | undefined | null>) {
-  return classes.filter(Boolean).join(' ');
-}
+import { useEffect, useRef, useState } from 'react';
 
 export default function TopNav() {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 8);
-    h();
-    window.addEventListener('scroll', h);
-    return () => window.removeEventListener('scroll', h);
+    function onClick(e: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
   }, []);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-50">
-      <div className={cn('mx-auto w-full max-w-7xl px-4 transition-all', scrolled ? 'py-3' : 'py-5')}>
-        <div className="pointer-events-auto mx-auto w-fit rounded-full bg-black/50 px-5 py-2 text-sm tracking-wide text-white backdrop-blur">
-          <button
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="mr-5 font-semibold uppercase hover:opacity-80"
-          >
-            Menu
-          </button>
+    <div className="pointer-events-none fixed left-0 top-0 z-50 w-full">
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        <div className="pointer-events-auto flex items-center justify-center gap-10 rounded-full bg-black/50 px-5 py-2 backdrop-blur">
+          {/* 居中主导航 */}
+          <nav className="hidden items-center gap-6 text-sm font-semibold tracking-wide md:flex">
+            <Link href="/events" className="text-white/90 hover:text-white">What’s On</Link>
+            <Link href="/events" className="text-white/90 hover:text-white">Tickets</Link>
+            <Link href="/gallery" className="text-white/90 hover:text-white">Gallery</Link>
+          </nav>
 
-          <Link href="/events" className="mx-5 uppercase hover:opacity-80">
-            What’s On
-          </Link>
-          <Link href="/events" className="ml-5 uppercase hover:opacity-80">
-            Tickets
-          </Link>
-        </div>
-
-        {/* 下拉菜单（非弹窗） */}
-        <div
-          className={cn(
-            'pointer-events-auto mx-auto mt-2 w-full max-w-3xl overflow-hidden rounded-2xl bg-black/70 text-white backdrop-blur transition-[max-height,opacity]',
-            open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-          )}
-        >
-          <div className="grid grid-cols-2 gap-1 p-4 text-sm sm:grid-cols-3">
-            <Link href="/events" className="rounded-xl bg-white/5 p-3 hover:bg-white/10">
-              What’s On
-            </Link>
-            <Link href="/membership" className="rounded-xl bg-white/5 p-3 hover:bg-white/10">
-              Membership
-            </Link>
-            <Link href="/venue-hire" className="rounded-xl bg-white/5 p-3 hover:bg-white/10">
-              Venue Hire
-            </Link>
-            <Link href="/about" className="rounded-xl bg-white/5 p-3 hover:bg-white/10">
-              About Our Club
-            </Link>
-            <Link href="/contact" className="rounded-xl bg-white/5 p-3 hover:bg-white/10">
-              Contact Us
-            </Link>
-            <Link href="/gallery" className="rounded-xl bg-white/5 p-3 hover:bg-white/10">
-              Gallery
-            </Link>
+          {/* Menu 下拉（移动端主入口 & 桌面更多） */}
+          <div ref={ref} className="relative">
+            <button
+              onClick={() => setOpen(v => !v)}
+              className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold tracking-wide text-white hover:bg-white/20"
+            >
+              Menu
+            </button>
+            {open && (
+              <div className="absolute left-1/2 mt-3 w-[280px] -translate-x-1/2 rounded-2xl border border-white/10 bg-black/90 p-2 shadow-2xl backdrop-blur">
+                <Link href="/events" className="block rounded-lg px-4 py-3 text-sm font-medium text-white/90 hover:bg-white/10">What’s On</Link>
+                <Link href="/membership" className="block rounded-lg px-4 py-3 text-sm font-medium text-white/90 hover:bg-white/10">Membership</Link>
+                <Link href="/venue-hire" className="block rounded-lg px-4 py-3 text-sm font-medium text-white/90 hover:bg-white/10">Venue Hire</Link>
+                <Link href="/about" className="block rounded-lg px-4 py-3 text-sm font-medium text-white/90 hover:bg-white/10">About Our Club</Link>
+                <Link href="/contact" className="block rounded-lg px-4 py-3 text-sm font-medium text-white/90 hover:bg-white/10">Contact Us</Link>
+              </div>
+            )}
           </div>
         </div>
       </div>
