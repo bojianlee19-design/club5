@@ -1,103 +1,72 @@
 // components/VideoHero.tsx
-'use client';
+import Link from "next/link";
 
-import Link from 'next/link';
-import { useEffect, useRef } from 'react';
+type Source = string | { src: string; type?: string };
 
-type VideoHeroProps = {
-  sources: string[];               // 例：['/hero-a.webm?v=1','/hero-a.mp4?v=1']
-  poster?: string;                 // 例：'/hero-poster.jpg'
+type Props = {
+  sources: Source[];
+  poster?: string;
   heading?: string;
   subheading?: string;
-  href?: string;                   // 整块点击跳转
+  cta?: { href: string; label: string };
+  href?: string; // 点击整块跳转（默认 /events）
 };
 
 export default function VideoHero({
-  sources,
-  poster = '/hero-poster.jpg',
+  sources = [],
+  poster,
   heading,
   subheading,
-  href = '/events',
-}: VideoHeroProps) {
-  const v0 = useRef<HTMLVideoElement>(null);
-  const v1 = useRef<HTMLVideoElement>(null);
-  const v2 = useRef<HTMLVideoElement>(null);
-
-  // 尝试自动播放（移动端需要 muted + playsInline）
-  useEffect(() => {
-    [v0.current, v1.current, v2.current].forEach((el) => {
-      el?.play().catch(() => {/* ignore */});
-    });
-  }, []);
-
-  const renderVideo = (ref: React.RefObject<HTMLVideoElement>, mirrored = false) => (
-    <video
-      ref={ref}
-      muted
-      loop
-      playsInline
-      preload="auto"
-      poster={poster}
-      style={{
-        flex: '1 1 0%',
-        width: '33.3333%',
-        height: '100%',
-        objectFit: 'cover',
-        transform: mirrored ? 'scaleX(-1)' : undefined,
-        backgroundColor: '#000',
-      }}
-      aria-label="Club hero"
-    >
-      {/* webm 优先，其次 mp4 */}
-      {sources.map((src) => {
-        const type = src.includes('.webm') ? 'video/webm' : 'video/mp4';
-        return <source key={src} src={src} type={type} />;
-      })}
-    </video>
-  );
-
+  cta,
+  href = "/events",
+}: Props) {
   return (
-    <section style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
-      {/* 点击整块跳转到主推活动 */}
-      <Link href={href} aria-label="Open featured event"
-        style={{ position: 'absolute', inset: 0, zIndex: 10 }} />
+    <section className="relative isolate">
+      {/* 点击整块跳转 */}
+      <Link href={href} className="absolute inset-0 z-10" aria-label="Go to What's On">
+        <span className="sr-only">Go to What's On</span>
+      </Link>
 
-      <div style={{ display: 'flex', height: '100%' }}>
-        {renderVideo(v0, false)}
-        {renderVideo(v1, true)}   {/* 中间镜像，MOS 同款视觉 */}
-        {renderVideo(v2, false)}
-      </div>
-
-      {/* 文案覆盖层 */}
-      {(heading || subheading) && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 11,
-            textAlign: 'center',
-            color: '#fff',
-            pointerEvents: 'none',
-            background:
-              'linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.25) 60%, rgba(0,0,0,.55) 100%)',
-          }}
+      <div className="relative h-[70vh] min-h-[460px] w-full overflow-hidden">
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          playsInline
+          loop
+          preload="auto"
+          poster={poster}
         >
-          <div style={{ padding: '0 24px' }}>
-            {heading && (
-              <h1 style={{ fontSize: 'clamp(28px,4vw,64px)', letterSpacing: 2, margin: 0 }}>
-                {heading}
-              </h1>
-            )}
-            {subheading && (
-              <p style={{ opacity: 0.9, marginTop: 8, fontSize: 'clamp(12px,1.6vw,18px)' }}>
-                {subheading}
-              </p>
-            )}
+          {sources.map((s, i) =>
+            typeof s === "string" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <source key={i} src={s} />
+            ) : (
+              <source key={i} src={s.src} type={s.type} />
+            )
+          )}
+        </video>
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+        <div className="relative z-20 h-full w-full flex items-end">
+          <div className="max-w-7xl mx-auto px-4 pb-10 w-full">
+            {heading ? (
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight">{heading}</h1>
+            ) : null}
+            {subheading ? (
+              <p className="mt-3 text-base sm:text-lg text-white/80">{subheading}</p>
+            ) : null}
+            {cta ? (
+              <Link
+                href={cta.href}
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-white text-black px-5 py-2 text-sm font-semibold hover:bg-white/90 transition"
+              >
+                {cta.label} →
+              </Link>
+            ) : null}
           </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }
