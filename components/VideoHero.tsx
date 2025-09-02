@@ -1,101 +1,103 @@
 // components/VideoHero.tsx
 'use client';
 
-import * as React from 'react';
+import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 
-type SourceItem = string | { src: string; type?: string };
-
-type Props = {
-  sources: SourceItem[];                    // 既支持 '/a.mp4' 也支持 {src,type}
-  poster?: string;
-  heading: string;
+type VideoHeroProps = {
+  sources: string[];               // 例：['/hero-a.webm?v=1','/hero-a.mp4?v=1']
+  poster?: string;                 // 例：'/hero-poster.jpg'
+  heading?: string;
   subheading?: string;
-  cta?: { href: string; label: string };
+  href?: string;                   // 整块点击跳转
 };
 
 export default function VideoHero({
   sources,
-  poster,
+  poster = '/hero-poster.jpg',
   heading,
   subheading,
-  cta,
-}: Props) {
-  // 规范化成 {src,type}
-  const normalized = sources.map((s) =>
-    typeof s === 'string'
-      ? {
-          src: s,
-          type: s.endsWith('.webm')
-            ? 'video/webm'
-            : s.endsWith('.mp4')
-            ? 'video/mp4'
-            : undefined,
-        }
-      : s
-  );
+  href = '/events',
+}: VideoHeroProps) {
+  const v0 = useRef<HTMLVideoElement>(null);
+  const v1 = useRef<HTMLVideoElement>(null);
+  const v2 = useRef<HTMLVideoElement>(null);
 
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
-
-  // iOS/Safari 等浏览器需要 muted+playsInline 才能自动播放；若失败再尝试 play()
-  React.useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
-
-    const tryPlay = async () => {
-      try {
-        await v.play();
-      } catch {
-        // 自动播放受阻时，不再报错，由浏览器显示控件
-        v.controls = true;
-      }
-    };
-
-    // 确保 muted 才能自动播放
-    v.muted = true;
-    v.playsInline = true;
-    tryPlay();
+  // 尝试自动播放（移动端需要 muted + playsInline）
+  useEffect(() => {
+    [v0.current, v1.current, v2.current].forEach((el) => {
+      el?.play().catch(() => {/* ignore */});
+    });
   }, []);
 
+  const renderVideo = (ref: React.RefObject<HTMLVideoElement>, mirrored = false) => (
+    <video
+      ref={ref}
+      muted
+      loop
+      playsInline
+      preload="auto"
+      poster={poster}
+      style={{
+        flex: '1 1 0%',
+        width: '33.3333%',
+        height: '100%',
+        objectFit: 'cover',
+        transform: mirrored ? 'scaleX(-1)' : undefined,
+        backgroundColor: '#000',
+      }}
+      aria-label="Club hero"
+    >
+      {/* webm 优先，其次 mp4 */}
+      {sources.map((src) => {
+        const type = src.includes('.webm') ? 'video/webm' : 'video/mp4';
+        return <source key={src} src={src} type={type} />;
+      })}
+    </video>
+  );
+
   return (
-    <section className="relative h-[80vh] min-h-[560px] w-full overflow-hidden">
-      {/* 背景视频 */}
-      <video
-        ref={videoRef}
-        className="absolute inset-0 h-full w-full object-cover"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="auto"
-        poster={poster}
-      >
-        {normalized.map((s, i) => (
-          <source key={i} src={s.src} type={s.type} />
-        ))}
-        {/* 旧浏览器兜底文案 */}
-        您的浏览器不支持 HTML5 视频。
-      </video>
+    <section style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
+      {/* 点击整块跳转到主推活动 */}
+      <Link href={href} aria-label="Open featured event"
+        style={{ position: 'absolute', inset: 0, zIndex: 10 }} />
 
-      {/* 顶部黑色渐变遮罩，让标题更清晰 */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60" />
-
-      {/* 前景文字与按钮 */}
-      <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-start justify-end gap-4 px-6 pb-14 text-white">
-        <h1 className="text-4xl font-extrabold tracking-tight md:text-6xl">
-          {heading}
-        </h1>
-        {subheading ? (
-          <p className="text-lg opacity-90 md:text-2xl">{subheading}</p>
-        ) : null}
-        {cta ? (
-          <a
-            href={cta.href}
-            className="mt-2 inline-flex items-center rounded-full bg-white/10 px-6 py-3 text-sm font-semibold ring-1 ring-white/30 backdrop-blur hover:bg-white/20"
-          >
-            {cta.label}
-          </a>
-        ) : null}
+      <div style={{ display: 'flex', height: '100%' }}>
+        {renderVideo(v0, false)}
+        {renderVideo(v1, true)}   {/* 中间镜像，MOS 同款视觉 */}
+        {renderVideo(v2, false)}
       </div>
+
+      {/* 文案覆盖层 */}
+      {(heading || subheading) && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            placeItems: 'center',
+            zIndex: 11,
+            textAlign: 'center',
+            color: '#fff',
+            pointerEvents: 'none',
+            background:
+              'linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.25) 60%, rgba(0,0,0,.55) 100%)',
+          }}
+        >
+          <div style={{ padding: '0 24px' }}>
+            {heading && (
+              <h1 style={{ fontSize: 'clamp(28px,4vw,64px)', letterSpacing: 2, margin: 0 }}>
+                {heading}
+              </h1>
+            )}
+            {subheading && (
+              <p style={{ opacity: 0.9, marginTop: 8, fontSize: 'clamp(12px,1.6vw,18px)' }}>
+                {subheading}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
