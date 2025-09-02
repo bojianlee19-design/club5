@@ -1,85 +1,111 @@
 // lib/sanity.ts
-import { createClient } from '@sanity/client';
+import { createClient } from '@sanity/client'
+import imageUrlBuilder from '@sanity/image-url'
 
-// ---- Env ----
-const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
-const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
-const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-05-01';
+const projectId =
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID ||
+  process.env.SANITY_PROJECT_ID ||
+  ''
+const dataset =
+  process.env.NEXT_PUBLIC_SANITY_DATASET ||
+  process.env.SANITY_DATASET ||
+  'production'
+const apiVersion =
+  process.env.NEXT_PUBLIC_SANITY_API_VERSION ||
+  process.env.SANITY_API_VERSION ||
+  '2024-05-01'
+const token = process.env.SANITY_READ_TOKEN // 可选：私有数据读取
 
-// 生产用 CDN，避免 429；本地你也可以设为 false
 export const sanityClient = createClient({
   projectId,
   dataset,
   apiVersion,
   useCdn: true,
-  // token: process.env.SANITY_READ_TOKEN, // 只有需要读草稿时才要
-});
+  token,
+  perspective: 'published',
+})
 
-// ---- Types (统一 slug=>string, cover=>string|undefined) ----
+const builder = imageUrlBuilder({ projectId, dataset })
+
+export function urlFor(src: any, width = 1200): string | undefined {
+  try {
+    if (!src) return undefined
+    if (typeof src === 'string') return src
+    return builder.image(src).width(width).auto('format').url()
+  } catch {
+    return undefined
+  }
+}
+
 export type EventDoc = {
-  _id: string;
-  title: string;
-  date?: string;
-  slug: string;      // 已经在查询里转成字符串
-  cover?: string;    // 图片直链
-};
+  _id: string
+  slug?: { current: string } | string
+  title?: string
+  date?: string
+  cover?: any // Sanity image object or string URL
+  summary?: string
+  [key: string]: any
+}
 
-export type EventDetail = EventDoc & {
-  description?: string;
-  body?: unknown;
-  // 按你 schema 需要可继续加字段
-};
+export type EventItem = {
+  id: string
+  slug: string
+  title: string
+  date?: string
+  cover?: string
+}
 
-// ---- GROQ（用普通字符串，避免额外依赖）----
-const commonFields = `
+export function flattenSlug(s?: { current: string } | string): string {
+  if (!s) return ''
+  return typeof s === 'string' ? s : s.current || ''
+}
+
+export function toEventItem(d: EventDoc): EventItem {
+  return {
+    id: d._id || flattenSlug(d.slug) || (d.title ?? ''),
+    slug: flattenSlug(d.slug),
+    title: d.title ?? '',
+    date: d.date,
+    cover: urlFor(d.cover, 1600),
+  }
+}
+
+const EVENT_FIELDS = `
   _id,
   title,
+  "slug": slug,
   date,
-  "slug": slug.current,
-  // 多字段兜底，按你 schema 改名即可
-  "cover": coalesce(cover.asset->url, poster.asset->url, image.asset->url)
-`;
+  cover,
+  summary
+`
 
-// 未来活动（或无日期）优先；如果你只想要未来活动，把 !defined(date) 去掉即可
-const UPCOMING_QUERY = `
-*[_type == "event" && defined(slug.current) && (date >= now() || !defined(date))]
-| order(date asc)[0...$limit]{
-  ${commonFields}
-}
-`;
-
-// 详情
-const BY_SLUG_QUERY = `
-*[_type == "event" && slug.current == $slug][0]{
-  ${commonFields},
-  description,
-  body
-}
-`;
-
-// ---- API ----
-
-// 供首页滚动/列表页使用
-export async function getUpcomingEvents(limit = 12): Promise<EventDoc[]> {
-  const res = await sanityClient.fetch<EventDoc[]>(
-    UPCOMING_QUERY,
-    { limit },
-    { cache: 'no-store' } // 避免旧缓存；也可用 next: { revalidate: 60 }
-  );
-  // 兜底：过滤掉没有 slug 的
-  return (res || []).filter(e => !!e?.slug);
+/**
+ * 未来/即将到来的活动（或没有日期的也会排在后面）
+ */
+export async function getUpcomingEvents(limit: number = 12): Promise<EventDoc[]> {
+  const now = new Date().toISOString()
+  const query = `*[_type == "event" && (date >= $now || !defined(date))] 
+    | order(coalesce(date, now()) asc)[0...$limit]{${EVENT_FIELDS}}`
+  return sanityClient.fetch(query, { now, limit })
 }
 
-// 兼容之前代码里用到的名字（实为别名）
-export const getEvents = getUpcomingEvents;
-
-// 详情页
-export async function getEventBySlug(slug: string): Promise<EventDetail | null> {
-  if (!slug) return null;
-  const res = await sanityClient.fetch<EventDetail>(
-    BY_SLUG_QUERY,
-    { slug },
-    { cache: 'no-store' }
-  );
-  return res ?? null;
+/**
+ * 所有活动（按时间正序）
+ */
+export async function getEvents(limit: number = 24): Promise<EventDoc[]> {
+  const query = `*[_type == "event"] 
+    | order(coalesce(date, now()) asc)[0...$limit]{${EVENT_FIELDS}}`
+  return sanityClient.fetch(query, { limit })
 }
+
+/**
+ * 根据 slug 获取单条活动
+ */
+export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
+  const query = `*[_type == "event" && slug.current == $slug][0]{${EVENT_FIELDS}, body}`
+  return sanityClient.fetch(query, { slug })
+}
+
+// 兼容旧命名
+export const fetchEvents = getEvents
+export const fetchEventBySlug = getEventBySlug
