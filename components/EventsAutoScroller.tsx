@@ -4,8 +4,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useMemo } from 'react'
 
-type EventItem = {
-  id: string
+export type EventItem = {
+  id?: string
   slug: string
   title: string
   date?: string
@@ -14,19 +14,19 @@ type EventItem = {
 
 export default function EventsAutoScroller({
   events,
-  speed = 40, // 秒：越小越快
+  durationSec = 40, // 动画时长（秒）
 }: {
   events: EventItem[]
-  speed?: number
+  durationSec?: number
 }) {
   if (!events?.length) return null
 
-  // 做无缝滚动：把同一批数据复制两遍
+  // 无缝：复制一遍
   const list = useMemo(() => [...events, ...events], [events])
 
   return (
     <div className="relative overflow-hidden py-6">
-      {/* 两侧渐隐遮罩（可选） */}
+      {/* 左右遮罩（渐隐） */}
       <div
         className="pointer-events-none absolute inset-y-0 left-0 w-16"
         style={{
@@ -44,19 +44,15 @@ export default function EventsAutoScroller({
         aria-hidden
       />
 
-      {/* 轨道：宽度 200%，向左位移 50% 实现无缝 */}
-      <div
-        className="marquee"
-        style={{ ['--d' as any]: `${speed}s` }} // 自定义动画时长
-      >
+      <div className="marquee" style={{ ['--d' as any]: `${durationSec}s` }}>
         <div className="row">
           {events.map((e) => (
-            <Card key={`a-${e.id}`} item={e} />
+            <Card key={`a-${e.id ?? e.slug}`} item={e} />
           ))}
         </div>
         <div className="row" aria-hidden>
           {events.map((e) => (
-            <Card key={`b-${e.id}`} item={e} />
+            <Card key={`b-${e.id ?? e.slug}`} item={e} />
           ))}
         </div>
       </div>
@@ -103,7 +99,6 @@ function Card({ item }: { item: EventItem }) {
             fill
             sizes="(max-width: 768px) 300px, 420px"
             className="object-cover transition-transform duration-700 group-hover:scale-105"
-            priority={false}
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-sm text-neutral-400">
