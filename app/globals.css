@@ -18,3 +18,12 @@
 
 /* 页面总体深色背景兜底（若外层丢失 class 也能覆盖） */
 html, body { background-color: #000; color: #fff; }
+/* -------- HAZY custom -------- */
+@keyframes hc-marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.hc-menu-item{
+  @apply rounded-xl bg-white/5 px-4 py-3 ring-1 ring-white/10 hover:bg-white/10 transition;
+}
