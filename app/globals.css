@@ -1,4 +1,10 @@
-/* Minimal global reset & helpers */
-*{box-sizing:border-box} html,body{padding:0;margin:0;background:#000;color:#fff}
-a{color:inherit}
-img{display:block;max-width:100%;height:auto}
+/* === EventsAutoScroller 马灯动画 === */
+@keyframes hc-marquee {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+.hc-marquee {
+  animation-name: hc-marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
