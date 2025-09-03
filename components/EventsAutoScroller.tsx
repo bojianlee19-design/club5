@@ -1,85 +1,73 @@
 // components/EventsAutoScroller.tsx
-import Link from "next/link";
+'use client'
 
-type RawEvent = {
-  _id?: string;
-  slug?: string | { current?: string };
-  title?: string;
-  date?: string;
-  cover?: string; // 已在服务器端把 Sanity 图片转成 URL 字符串
-};
+import Link from 'next/link'
+import { useMemo, useState } from 'react'
 
-type Props = {
-  events: RawEvent[];
-  /** 整体滚动一圈所需时长（秒） */
-  durationSec?: number;
-};
-
-function norm(e: RawEvent) {
-  const slug =
-    typeof e.slug === "string"
-      ? e.slug
-      : e.slug?.current ?? (e._id ? String(e._id) : "");
-  return {
-    id: e._id ?? slug,
-    slug,
-    title: e.title ?? "Untitled",
-    date: e.date,
-    cover: e.cover,
-  };
+export type EventItem = {
+  id: string
+  slug: string
+  title: string
+  date?: string
+  cover?: string
 }
 
-export default function EventsAutoScroller({ events, durationSec = 28 }: Props) {
-  const items = events.map(norm).filter((x) => !!x.id);
-  const loop = [...items, ...items]; // 为无缝循环复制一遍
+export default function EventsAutoScroller({
+  events,
+  durationSec = 28,
+}: {
+  events: EventItem[]
+  durationSec?: number
+}) {
+  const [paused, setPaused] = useState(false)
+  // 为了“无缝滚动”，内容*2
+  const data = useMemo(() => [...events, ...events], [events])
 
   return (
-    <div className="relative mx-auto w-full max-w-6xl">
-      <div className="pause-on-hover overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-        <ul
-          className="flex w-max gap-4 animate-marquee"
-          style={{ animationDuration: `${durationSec}s` }}
-        >
-          {loop.map((e, idx) => {
-            const href = e.slug ? `/events/${e.slug}` : "/events";
-            return (
-              <li key={`${e.id}-${idx}`} className="w-[280px] shrink-0">
-                <Link href={href} className="group block">
-                  <div className="relative h-40 w-full overflow-hidden rounded-xl">
-                    {e.cover ? (
-                      // 用 <img> 避免 next/image 域名白名单
-                      <img
-                        src={e.cover}
-                        alt={e.title}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-zinc-700 to-zinc-500" />
-                    )}
+    <div
+      className="group mx-auto mt-8 w-full max-w-7xl overflow-hidden px-3"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div
+        className="flex items-stretch gap-4"
+        style={{
+          animation: `hc-marquee ${durationSec}s linear infinite`,
+          animationPlayState: paused ? 'paused' : 'running',
+        }}
+      >
+        {data.map((e, idx) => (
+          <Link
+            href={`/events/${encodeURIComponent(e.slug)}`}
+            key={`${e.id}-${idx}`}
+            className="relative h-48 w-[280px] shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10"
+          >
+            {/* 封面 */}
+            {e.cover ? (
+              // 用 <img> 避免 next/image 的域名限制
+              <img
+                src={e.cover}
+                alt={e.title}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-neutral-800">
+                <span className="text-sm text-neutral-300">No cover</span>
+              </div>
+            )}
 
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                    <div className="absolute bottom-2 left-2 right-2">
-                      {e.date && (
-                        <div className="text-[11px] uppercase tracking-wide opacity-80">
-                          {new Date(e.date).toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </div>
-                      )}
-                      <div className="text-sm font-semibold leading-tight">
-                        {e.title}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+            {/* 信息条（与 MOS 相似：左上日期，底部标题） */}
+            <div className="absolute left-2 top-2 rounded bg-black/60 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
+              {e.date ? new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : 'TBA'}
+            </div>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3">
+              <div className="line-clamp-2 text-sm font-bold">{e.title || 'Untitled'}</div>
+              <div className="mt-0.5 text-[11px] opacity-80">View Details →</div>
+            </div>
+          </Link>
+        ))}
       </div>
     </div>
-  );
+  )
 }
