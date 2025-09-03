@@ -2,36 +2,43 @@
 import Link from 'next/link'
 
 type Props = {
-  /** 可播放的视频 src（目前你可用 /hero-b0.mp4） */
-  src: string
-  /** 备用海报 */
-  poster?: string
+  src: string           // 视频文件（public 下，比如 /hero-b0.mp4）
+  poster?: string       // 海报占位，可选
+}
+
+function V({ src, poster }: Props) {
+  return (
+    <video
+      className="h-full w-full object-cover"
+      src={src}
+      poster={poster}
+      muted
+      loop
+      playsInline
+      autoPlay
+      preload="metadata"
+    />
+  )
 }
 
 export default function HeroTriptych({ src, poster }: Props) {
   return (
-    <section className="relative mx-auto w-full max-w-[1600px] px-3 pt-24">
-      {/* 整块可点击进 What's On */}
-      <Link href="/events" className="block group">
-        <div className="grid aspect-[16/6] w-full grid-cols-3 gap-2 overflow-hidden rounded-3xl md:aspect-[16/5]">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="relative">
-              <video
-                className="absolute inset-0 h-full w-full object-cover"
-                src={src}
-                poster={poster}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-              />
-              {/* 轻微遮罩，提升文字/对比度（与 MOS 相似） */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent opacity-0 transition group-hover:opacity-100" />
-            </div>
-          ))}
+    <Link href="/events" aria-label="Go to What's On">
+      <section className="relative w-full overflow-hidden">
+        {/* 16:9 高宽比容器，桌面三列、移动单列 */}
+        <div className="mx-auto aspect-[16/9] w-full">
+          <div className="grid h-full w-full grid-cols-1 md:grid-cols-3">
+            <V src={src} poster={poster} />
+            <V src={src} poster={poster} />
+            <V src={src} poster={poster} />
+          </div>
         </div>
-      </Link>
-    </section>
+        {/* 左下角文案（可按需调样式） */}
+        <div className="pointer-events-none absolute left-6 bottom-6 z-10 select-none">
+          <div className="text-2xl font-extrabold tracking-wide md:text-3xl">HAZY CLUB</div>
+          <div className="opacity-80">NIGHTS · MUSIC · COMMUNITY</div>
+        </div>
+      </section>
+    </Link>
   )
 }
