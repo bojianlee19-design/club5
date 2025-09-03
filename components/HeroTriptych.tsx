@@ -1,41 +1,41 @@
 // components/HeroTriptych.tsx
-import Link from 'next/link'
+import Link from "next/link";
 
 type Props = {
-  src: string
-  poster?: string
-  height?: string // e.g. '80vh'
-}
+  /** 视频文件路径（public/ 下），比如 "/hero-b0.mp4" */
+  src: string;
+  /** 可选：poster 静态图 */
+  poster?: string;
+};
 
-export default function HeroTriptych({ src, poster, height = '80vh' }: Props) {
+export default function HeroTriptych({ src, poster }: Props) {
+  const sources = [src, src, src]; // 三联同源；以后想换成三段不同视频也很容易
+
   return (
-    <Link href="/events" className="block group">
-      <section
-        className="w-screen"
-        style={{ height }}
+    <section className="relative bg-black">
+      {/* 整块可点击进入 What's On（/events） */}
+      <Link
+        href="/events"
         aria-label="Go to What's On"
-        title="Go to What's On"
-      >
-        <div className="grid h-full w-full grid-cols-1 md:grid-cols-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="relative">
-              <video
-                className="h-full w-full object-cover"
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-                poster={poster}
-              >
-                <source src={`${src}`} type="video/mp4" />
-              </video>
-              {/* 轻微遮罩，悬停有动效 */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 to-black/0 transition-opacity duration-300 group-hover:opacity-60" />
-            </div>
-          ))}
-        </div>
-      </section>
-    </Link>
-  )
+        className="absolute inset-0 z-10"
+      />
+      {/* 容器：桌面三列，移动一列；高度与 MOS 相近 */}
+      <div className="mx-auto grid h-[70vh] max-w-7xl grid-cols-1 gap-2 px-2 md:h-[85vh] md:grid-cols-3">
+        {sources.map((s, i) => (
+          <video
+            key={i}
+            className="h-full w-full rounded-2xl object-cover"
+            autoPlay
+            muted
+            playsInline
+            loop
+            preload="metadata"
+            poster={poster}
+          >
+            <source src={s} type="video/mp4" />
+          </video>
+        ))}
+      </div>
+    </section>
+  );
 }
