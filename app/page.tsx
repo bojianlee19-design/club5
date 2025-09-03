@@ -1,49 +1,59 @@
 // app/page.tsx
-import TopNav from "@/components/TopNav";
-import HeroTriptych from "@/components/HeroTriptych";
-import EventsAutoScroller from "@/components/EventsAutoScroller";
-import { getUpcomingEvents } from "@/lib/sanity";
+import HeroTriptych from '@/components/HeroTriptych'
+import EventsAutoScroller, { EventItem } from '@/components/EventsAutoScroller'
+import Link from 'next/link'
+import { getUpcomingEvents } from '@/lib/sanity'
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  // 兼容你的 lib/sanity：此方法不接收参数
-  const events = (await getUpcomingEvents()) as any[];
+  // 从 Sanity 取最近活动（保底 12 条）
+  const docs = await getUpcomingEvents(12)
+
+  // 规范化为组件需要的结构
+  const events: EventItem[] = (docs || []).map((d: any, i: number) => ({
+    id: d._id ?? String(i),
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current ?? '',
+    title: d.title ?? '',
+    date: d.date,
+    // 允许两种字段：cover（已是 URL）或 mainImage / image（Sanity 图像 URL 你已有工具函数时可替换）
+    cover: d.cover ?? d.image ?? d.mainImage ?? '',
+  })).filter(e => e.slug) // 没有 slug 的先过滤
 
   return (
     <main className="bg-black text-white">
-      <TopNav />
-
-      {/* 英雄：横向三联视频（整块可点击进入 /events） */}
-      <HeroTriptych src="/hero-b0.mp4" />
+      {/* 横向三联英雄（整块可点进 What's On） */}
+      <HeroTriptych src="/hero-b0.mp4" poster="/hero-poster.jpg" />
 
       {/* 英雄下方：居中自动滚动活动 */}
-      <section className="mx-auto my-10 max-w-7xl px-4">
-        <h2 className="mb-4 text-center text-xl font-semibold tracking-wide">
-          What’s On
-        </h2>
-        <EventsAutoScroller events={events} durationSec={28} />
+      <section className="mx-auto w-full max-w-7xl px-3">
+        <div className="mb-3 mt-8 flex items-baseline justify-between">
+          <h2 className="text-xl font-extrabold tracking-wide">What’s On</h2>
+          <Link href="/events" className="text-sm underline opacity-80 hover:opacity-100">
+            View all →
+          </Link>
+        </div>
       </section>
+      <EventsAutoScroller events={events} durationSec={28} />
 
-      {/* 页脚（恢复地址 & 联系方式） */}
-      <footer className="mt-16 border-t border-white/10">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 md:grid-cols-3">
+      {/* 简洁底部（恢复你站点原有信息） */}
+      <footer className="mx-auto mt-16 w-full max-w-7xl px-3 pb-16 text-sm text-neutral-300">
+        <div className="grid gap-6 md:grid-cols-3">
           <div>
-            <div className="font-bold">Visit us</div>
-            <div>28 Eyre St, Sheffield City Centre, Sheffield S1 4QY</div>
+            <h3 className="mb-2 font-bold text-white">Visit us</h3>
+            <p>28 Eyre St, Sheffield City Centre, Sheffield S1 4QY</p>
           </div>
           <div>
-            <div className="font-bold">Contact</div>
-            <a href="mailto:matt@hazyclub.co.uk" className="underline">
-              matt@hazyclub.co.uk
-            </a>
+            <h3 className="mb-2 font-bold text-white">Contact</h3>
+            <p><a className="underline" href="mailto:matt@hazyclub.co.uk">matt@hazyclub.co.uk</a></p>
           </div>
           <div>
-            <div className="font-bold">Follow</div>
-            <div>@hazyclub</div>
+            <h3 className="mb-2 font-bold text-white">Follow</h3>
+            <p>@hazyclub</p>
           </div>
         </div>
+        <div className="mt-8 opacity-60">© {new Date().getFullYear()} HAZY Club. All rights reserved.</div>
       </footer>
     </main>
-  );
+  )
 }
