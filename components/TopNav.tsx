@@ -9,7 +9,7 @@ export default function TopNav() {
 
   return (
     <div className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2">
-      <nav className="pointer-events-auto flex items-center gap-6 rounded-full bg-black/60 px-5 py-2 text-sm backdrop-blur md:text-base">
+      <nav className="pointer-events-auto flex items-center gap-6 rounded-full bg-black/60 px-6 py-2 text-sm backdrop-blur md:text-base">
         {/* Menu（下拉） */}
         <div className="relative">
           <button
@@ -21,7 +21,7 @@ export default function TopNav() {
           </button>
           {open && (
             <div
-              className="absolute left-1/2 z-50 mt-2 w-52 -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-2 shadow-xl"
+              className="absolute left-1/2 z-50 mt-2 w-56 -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-2 shadow-xl"
               onMouseDown={e => e.preventDefault()}
             >
               <Link href="/events" className="block rounded-lg px-3 py-2 hover:bg-white/10">What’s On</Link>
@@ -33,13 +33,9 @@ export default function TopNav() {
           )}
         </div>
 
-        {/* Tables / Tickets 与 MOS 一样放在右侧 */}
-        <Link href="/tables" className="uppercase tracking-wide hover:opacity-90">
-          Tables
-        </Link>
-        <Link href="/events" className="uppercase tracking-wide hover:opacity-90">
-          Tickets
-        </Link>
+        {/* Tables / Tickets */}
+        <Link href="/tables" className="uppercase tracking-wide hover:opacity-90">Tables</Link>
+        <Link href="/events" className="uppercase tracking-wide hover:opacity-90">Tickets</Link>
       </nav>
     </div>
   )
