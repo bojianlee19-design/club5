@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRef } from 'react';
 import EventCardWide from './EventCardWide';
 
-type Item = { slug: string; title: string; date?: string; cover?: string };
+type Item = { id?: string; slug: string; title: string; date?: string; cover?: string };
 
 export default function EventsRail({ events }: { events: Item[] }) {
   const listRef = useRef<HTMLUListElement>(null);
@@ -50,7 +50,14 @@ export default function EventsRail({ events }: { events: Item[] }) {
             className="snap-center w-[86vw] min-w-[280px] max-w-[420px] sm:w-[420px] md:w-[520px] mx-auto"
           >
             <Link href={`/events/${e.slug}`} className="block">
-              <EventCardWide slug={e.slug} title={e.title} date={e.date} cover={e.cover ?? undefined} />
+              {/* 这里补上 id（用 slug 兜底保证有值） */}
+              <EventCardWide
+                id={e.id ?? e.slug}
+                slug={e.slug}
+                title={e.title}
+                date={e.date}
+                cover={e.cover ?? undefined}
+              />
             </Link>
           </li>
         ))}
