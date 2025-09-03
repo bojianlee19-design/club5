@@ -6,7 +6,7 @@ export type EventItem = {
   slug: string
   title: string
   date?: string
-  cover?: string // 已经是 URL（见 lib/sanity.ts 的投影）
+  cover?: string
 }
 
 export default function EventsAutoScroller({
@@ -16,17 +16,14 @@ export default function EventsAutoScroller({
   events: EventItem[]
   durationSec?: number
 }) {
-  // 轨道里放两份，实现无缝循环
+  // 复制一份实现无缝循环
   const lane = [...events, ...events]
 
   return (
     <div className="relative mx-auto w-full overflow-hidden">
       <div
-        className="flex gap-4 will-change-transform hover:[animation-play-state:paused]"
-        style={{
-          width: 'max-content',
-          animation: `hc-marquee ${durationSec}s linear infinite`,
-        }}
+        className="hc-marquee flex gap-4 will-change-transform hover:[animation-play-state:paused]"
+        style={{ animationDuration: `${durationSec}s`, width: 'max-content' }}
       >
         {lane.map((e, idx) => (
           <Link
@@ -35,7 +32,6 @@ export default function EventsAutoScroller({
             className="group relative block h-44 w-72 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5"
           >
             {e.cover ? (
-              // 用原生 <img> 避免 next/image 域名白名单问题
               <img
                 src={e.cover}
                 alt={e.title}
@@ -57,14 +53,6 @@ export default function EventsAutoScroller({
           </Link>
         ))}
       </div>
-
-      {/* 关键帧（全局一次） */}
-      <style jsx global>{`
-        @keyframes hc-marquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
-        }
-      `}</style>
     </div>
   )
 }
