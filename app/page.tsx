@@ -4,56 +4,49 @@ import HeroTriptych from '@/components/HeroTriptych';
 import EventsAutoScroller from '@/components/EventsAutoScroller';
 import { getUpcomingEvents } from '@/lib/sanity';
 
-export const dynamic = 'force-dynamic';
-
 export default async function HomePage() {
-  // 读取最新活动（已在 lib/sanity.ts 里禁用缓存）
-  const events = await getUpcomingEvents(20);
+  // 获取活动数据（用于英雄下方滚动）
+  const events = await getUpcomingEvents(20); // -> { id, slug, title, date?, cover? }[]
 
   return (
     <main className="bg-black text-white">
-      {/* 顶部留出空间，避免被 fixed 的导航遮住 */}
-      <section className="relative pt-20">
-        {/* 整个英雄区可点击跳转 What's On */}
-        <Link href="/events" className="block">
-          {/* 使用你已有的三联视频组件；视频文件放在 /public 下，例如 /hero-b0.mp4 */}
-          <HeroTriptych src="/hero-b0.mp4" poster="/hero-poster.jpg" />
+      {/* 英雄：整块可点击进入 What's On（/events） */}
+      <section>
+        <Link href="/events" className="block focus:outline-none">
+          <HeroTriptych
+            src="/hero-b0.mp4"
+            poster="/hero-poster.jpg"
+            // 维持我们之前的交互与样式（横向三联、桌面三联 / 移动单视频）
+          />
         </Link>
       </section>
 
-      {/* 英雄下方：单卡居中轮播（自动滚动，悬停/触摸暂停，左右箭头，可滑动） */}
+      {/* 英雄下方：活动推送（竖版海报、居中、一次只显示一个；悬停暂停/左右切换/移动端可滑动） */}
       <section className="mx-auto w-full max-w-7xl px-4">
-        <div className="mt-10">
-          <EventsAutoScroller events={events} intervalSec={5} />
-        </div>
+        <EventsAutoScroller events={events} durationSec={6} />
       </section>
 
-      {/* 底部联系方式与地图（可按需修改文案） */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-16">
-        <div className="grid gap-8 md:grid-cols-2">
-          <div>
-            <h2 className="text-xl font-bold">Contact</h2>
-            <p className="mt-2 opacity-80">
-              For general enquiries &amp; bookings:
-            </p>
-            <p className="mt-2">
-              <a href="mailto:info@hazyclub.co.uk" className="underline">
-                info@hazyclub.co.uk
-              </a>
-            </p>
+      {/* —— 这里原来有 “Find us + 地图” —— 已按你的要求整个删除 —— */}
+
+      {/* 保留的「Visit us」信息：保持简洁（可按需改地址/时间） */}
+      <section className="mx-auto w-full max-w-7xl px-4 pb-28 pt-16">
+        <h2 className="text-xl font-extrabold tracking-wide">VISIT US</h2>
+        <div className="mt-3 grid gap-6 md:grid-cols-3">
+          <div className="space-y-1 text-white/80">
+            <div className="font-semibold text-white">Address</div>
+            <address className="not-italic">
+              Hazy Club<br />
+              Hackney Wick, London<br />
+              United Kingdom
+            </address>
           </div>
-          <div>
-            <h2 className="text-xl font-bold">Find us</h2>
-            <div className="mt-3 overflow-hidden rounded-2xl border border-white/10">
-              {/* 使用关键字搜索嵌入，避免地址写错；确认后可换成精确坐标 */}
-              <iframe
-                title="Hazy Club Map"
-                src="https://www.google.com/maps?q=Hazy%20Club%20Sheffield&output=embed"
-                width="100%"
-                height="280"
-                loading="lazy"
-              />
-            </div>
+          <div className="space-y-1 text-white/80">
+            <div className="font-semibold text-white">Hours</div>
+            <p>Fri–Sat: 22:00 – 04:00</p>
+          </div>
+          <div className="space-y-1 text-white/80">
+            <div className="font-semibold text-white">Contact</div>
+            <p>info@hazyclub.co.uk</p>
           </div>
         </div>
       </section>
