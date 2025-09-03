@@ -8,22 +8,13 @@ export default async function EventsPage() {
   const rows: any[] = await getUpcomingEvents()
 
   const events = (rows || []).map((d) => {
-    const slug =
-      typeof d?.slug === 'string' ? d.slug : d?.slug?.current ?? String(d?._id ?? '')
+    const slug = typeof d?.slug === 'string' ? d.slug : d?.slug?.current ?? String(d?._id ?? '')
     const cover =
       d?.cover ||
       d?.image?.asset?.url || d?.image?.url || d?.image ||
       d?.mainImage?.asset?.url || d?.mainImage?.url || d?.mainImage ||
-      d?.gallery?.[0]?.asset?.url || d?.gallery?.[0]?.url ||
-      ''
-
-    return {
-      id: String(d?._id ?? slug),
-      slug,
-      title: d?.title ?? '',
-      date: d?.date,
-      cover,
-    }
+      d?.gallery?.[0]?.asset?.url || d?.gallery?.[0]?.url || ''
+    return { id: String(d?._id ?? slug), slug, title: d?.title ?? '', date: d?.date, cover }
   })
 
   return (
@@ -42,7 +33,11 @@ export default async function EventsPage() {
           >
             <div className="relative aspect-[16/9] w-full overflow-hidden">
               {e.cover ? (
-                <img src={e.cover} alt={e.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img
+                  src={e.cover}
+                  alt={e.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center opacity-60">No cover</div>
               )}
