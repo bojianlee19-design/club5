@@ -2,8 +2,8 @@
 import Link from 'next/link'
 
 type Props = {
-  src: string           // 视频文件（public 下，比如 /hero-b0.mp4）
-  poster?: string       // 海报占位，可选
+  src: string        // public 下视频路径，例如 /hero-b0.mp4
+  poster?: string
 }
 
 function V({ src, poster }: Props) {
@@ -21,19 +21,23 @@ function V({ src, poster }: Props) {
   )
 }
 
+/**
+ * 关键：不使用响应式断点，直接 grid-cols-3，确保任何屏幕都保持一行三格
+ * 外层用 aspect-[16/9] 固定比例，避免视频换行。
+ */
 export default function HeroTriptych({ src, poster }: Props) {
   return (
     <Link href="/events" aria-label="Go to What's On">
       <section className="relative w-full overflow-hidden">
-        {/* 16:9 高宽比容器，桌面三列、移动单列 */}
         <div className="mx-auto aspect-[16/9] w-full">
-          <div className="grid h-full w-full grid-cols-1 md:grid-cols-3">
+          <div className="grid h-full w-full grid-cols-3">
             <V src={src} poster={poster} />
             <V src={src} poster={poster} />
             <V src={src} poster={poster} />
           </div>
         </div>
-        {/* 左下角文案（可按需调样式） */}
+
+        {/* 左下角文案 */}
         <div className="pointer-events-none absolute left-6 bottom-6 z-10 select-none">
           <div className="text-2xl font-extrabold tracking-wide md:text-3xl">HAZY CLUB</div>
           <div className="opacity-80">NIGHTS · MUSIC · COMMUNITY</div>
