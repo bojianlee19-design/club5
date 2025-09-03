@@ -1,115 +1,70 @@
-'use client'
-
+// components/EventsAutoScroller.tsx
 import Link from 'next/link'
-import Image from 'next/image'
-import { useMemo } from 'react'
 
 export type EventItem = {
-  id?: string
+  id: string
   slug: string
   title: string
   date?: string
-  cover?: string
+  cover?: string // 已经是 URL（见 lib/sanity.ts 的投影）
 }
 
 export default function EventsAutoScroller({
   events,
-  durationSec = 40, // 动画时长（秒）
+  durationSec = 28,
 }: {
   events: EventItem[]
   durationSec?: number
 }) {
-  if (!events?.length) return null
-
-  // 无缝：复制一遍
-  const list = useMemo(() => [...events, ...events], [events])
+  // 轨道里放两份，实现无缝循环
+  const lane = [...events, ...events]
 
   return (
-    <div className="relative overflow-hidden py-6">
-      {/* 左右遮罩（渐隐） */}
+    <div className="relative mx-auto w-full overflow-hidden">
       <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-16"
+        className="flex gap-4 will-change-transform hover:[animation-play-state:paused]"
         style={{
-          maskImage: 'linear-gradient(90deg, black, transparent)',
-          WebkitMaskImage: 'linear-gradient(90deg, black, transparent)',
+          width: 'max-content',
+          animation: `hc-marquee ${durationSec}s linear infinite`,
         }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-16"
-        style={{
-          maskImage: 'linear-gradient(90deg, transparent, black)',
-          WebkitMaskImage: 'linear-gradient(90deg, transparent, black)',
-        }}
-        aria-hidden
-      />
-
-      <div className="marquee" style={{ ['--d' as any]: `${durationSec}s` }}>
-        <div className="row">
-          {events.map((e) => (
-            <Card key={`a-${e.id ?? e.slug}`} item={e} />
-          ))}
-        </div>
-        <div className="row" aria-hidden>
-          {events.map((e) => (
-            <Card key={`b-${e.id ?? e.slug}`} item={e} />
-          ))}
-        </div>
+      >
+        {lane.map((e, idx) => (
+          <Link
+            href={`/events/${e.slug}`}
+            key={`${e.id}-${idx}`}
+            className="group relative block h-44 w-72 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5"
+          >
+            {e.cover ? (
+              // 用原生 <img> 避免 next/image 域名白名单问题
+              <img
+                src={e.cover}
+                alt={e.title}
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-white/5 text-sm opacity-70">
+                No cover
+              </div>
+            )}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-3">
+              <div className="text-sm opacity-80">
+                {e.date ? new Date(e.date).toLocaleDateString() : ''}
+              </div>
+              <div className="line-clamp-1 font-semibold">{e.title}</div>
+            </div>
+          </Link>
+        ))}
       </div>
 
-      <style jsx>{`
-        @keyframes hc-scroll {
-          from {
-            transform: translateX(0);
-          }
-          to {
-            transform: translateX(-50%);
-          }
-        }
-        .marquee {
-          display: flex;
-          width: 200%;
-          animation: hc-scroll var(--d, 40s) linear infinite;
-          will-change: transform;
-        }
-        .row {
-          width: 50%;
-          display: flex;
-          gap: 16px;
-          padding-right: 16px;
+      {/* 关键帧（全局一次） */}
+      <style jsx global>{`
+        @keyframes hc-marquee {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
         }
       `}</style>
     </div>
-  )
-}
-
-function Card({ item }: { item: EventItem }) {
-  const href = item.slug ? `/events/${item.slug}` : '#'
-  return (
-    <Link
-      href={href}
-      className="group relative block w-[300px] md:w-[420px]"
-      prefetch={false}
-    >
-      <div className="relative aspect-[16/9] overflow-hidden rounded-2xl bg-neutral-900">
-        {item.cover ? (
-          <Image
-            src={item.cover}
-            alt={item.title || 'Event'}
-            fill
-            sizes="(max-width: 768px) 300px, 420px"
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-        ) : (
-          <div className="absolute inset-0 grid place-items-center text-sm text-neutral-400">
-            No cover
-          </div>
-        )}
-      </div>
-      <div className="mt-2 text-sm opacity-80">
-        {item.date ? new Date(item.date).toLocaleString() : ''}
-      </div>
-      <div className="text-base font-semibold tracking-wide">{item.title}</div>
-    </Link>
   )
 }
