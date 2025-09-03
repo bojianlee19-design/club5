@@ -8,59 +8,39 @@ export default function TopNav() {
   const [open, setOpen] = useState(false)
 
   return (
-    <>
-      {/* 顶部居中三项：Menu / Tables / Tickets */}
-      <nav className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2">
-        <ul className="pointer-events-auto flex items-center gap-6 text-sm font-bold tracking-wide">
-          <li>
-            <button
-              onClick={() => setOpen(v => !v)}
-              className="rounded-full bg-white/10 px-4 py-2 backdrop-blur transition hover:bg-white/20"
-              aria-expanded={open}
-            >
-              Menu
-            </button>
-          </li>
-          <li>
-            <Link
-              href="/tables"
-              className="rounded-full bg-white/10 px-4 py-2 backdrop-blur transition hover:bg-white/20"
-            >
-              Tables
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/events"
-              className="rounded-full bg-white px-4 py-2 text-black transition hover:bg-white/90"
-            >
-              Tickets
-            </Link>
-          </li>
-        </ul>
-      </nav>
-
-      {/* Menu 下拉（居中） */}
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="absolute left-1/2 top-20 w-[min(92vw,720px)] -translate-x-1/2 rounded-2xl bg-neutral-900 p-6 shadow-2xl ring-1 ring-white/10"
-            onClick={e => e.stopPropagation()}
+    <div className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2">
+      <nav className="pointer-events-auto flex items-center gap-6 rounded-full bg-black/60 px-5 py-2 text-sm backdrop-blur md:text-base">
+        {/* Menu（下拉） */}
+        <div className="relative">
+          <button
+            onClick={() => setOpen(v => !v)}
+            onBlur={() => setOpen(false)}
+            className="uppercase tracking-wide hover:opacity-90"
           >
-            <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-              <Link className="hc-menu-item" href="/events">What’s On</Link>
-              <Link className="hc-menu-item" href="/membership">Membership</Link>
-              <Link className="hc-menu-item" href="/venue-hire">Venue Hire</Link>
-              <Link className="hc-menu-item" href="/about">About Our Club</Link>
-              <Link className="hc-menu-item" href="/contact">Contact Us</Link>
-              <Link className="hc-menu-item" href="/gallery">Gallery</Link>
+            Menu
+          </button>
+          {open && (
+            <div
+              className="absolute left-1/2 z-50 mt-2 w-52 -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-2 shadow-xl"
+              onMouseDown={e => e.preventDefault()}
+            >
+              <Link href="/events" className="block rounded-lg px-3 py-2 hover:bg-white/10">What’s On</Link>
+              <Link href="/membership" className="block rounded-lg px-3 py-2 hover:bg-white/10">Membership</Link>
+              <Link href="/venue-hire" className="block rounded-lg px-3 py-2 hover:bg-white/10">Venue Hire</Link>
+              <Link href="/about" className="block rounded-lg px-3 py-2 hover:bg-white/10">About Our Club</Link>
+              <Link href="/contact" className="block rounded-lg px-3 py-2 hover:bg-white/10">Contact Us</Link>
             </div>
-          </div>
+          )}
         </div>
-      )}
-    </>
+
+        {/* Tables / Tickets 与 MOS 一样放在右侧 */}
+        <Link href="/tables" className="uppercase tracking-wide hover:opacity-90">
+          Tables
+        </Link>
+        <Link href="/events" className="uppercase tracking-wide hover:opacity-90">
+          Tickets
+        </Link>
+      </nav>
+    </div>
   )
 }
