@@ -1,30 +1,34 @@
 // app/page.tsx
-import Link from 'next/link'
-import { getUpcomingEvents, toEventItem, type EventItem } from '@/lib/sanity'
 import HeroTriptych from '@/components/HeroTriptych'
-import EventsAutoScroller from '@/components/EventsAutoScroller'
-
-export const dynamic = 'force-dynamic'
+import EventsAutoScroller, { EventItem } from '@/components/EventsAutoScroller'
+import { getUpcomingEvents } from '@/lib/sanity'
+import Link from 'next/link'
 
 export default async function HomePage() {
-  // 取未来活动，映射成滚动组件需要的结构
   const docs = await getUpcomingEvents(20)
-  const events: EventItem[] = docs.map(toEventItem).filter(e => !!e.slug)
+  const events: EventItem[] = docs.map((d) => ({
+    id: d._id,
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current ?? '',
+    title: d.title ?? '',
+    date: d.date,
+    cover: d.cover, // 已经是 URL
+  }))
 
   return (
     <main className="bg-black text-white">
-      {/* 三联英雄：整块可点击进入 What's On（/events） */}
-      <Link href="/events" className="block focus:outline-none">
-        <HeroTriptych
-          src="/hero-b0.mp4"
-          // 如果需要封面占位图，可放一张
-          poster="/hero-poster.jpg"
-          // 循环/静音/自动播放都在组件里处理，无需额外参数
-        />
-      </Link>
+      {/* 英雄：三联横向并排（整块可点击进入 /events） */}
+      <HeroTriptych src="/hero-b0.mp4" poster="/hero-poster.jpg" height="80vh" />
 
-      {/* 英雄下方：自动滚动活动（居中、悬停暂停） */}
-      <section className="mx-auto w-full max-w-7xl px-4">
+      {/* What’s On 标题 + View all */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-10">
+        <div className="mb-6 flex items-end justify-between">
+          <h2 className="text-2xl font-extrabold tracking-wide">What’s On</h2>
+          <Link href="/events" className="underline opacity-80 hover:opacity-100">
+            View all →
+          </Link>
+        </div>
+
+        {/* 自动滚动活动推送（居中、悬停暂停） */}
         <EventsAutoScroller events={events} durationSec={28} />
       </section>
     </main>
