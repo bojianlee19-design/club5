@@ -22,15 +22,14 @@ type Props = {
 function formatDateEnglish(iso?: string) {
   if (!iso) return '';
   const d = new Date(iso);
-  // 英文，固定 en-GB，再转大写：FRI 27 SEP
-  const dow = d.toLocaleString('en-GB', { weekday: 'short' }); // Fri
-  const day = d.toLocaleString('en-GB', { day: '2-digit' });   // 27
-  const mon = d.toLocaleString('en-GB', { month: 'short' });   // Sep
+  // 英文格式：FRI 27 SEP
+  const dow = d.toLocaleString('en-GB', { weekday: 'short' });
+  const day = d.toLocaleString('en-GB', { day: '2-digit' });
+  const mon = d.toLocaleString('en-GB', { month: 'short' });
   return `${dow} ${day} ${mon}`.toUpperCase();
 }
 
 export default function EventsAutoScroller({ events, durationSec = 6 }: Props) {
-  // 过滤无 slug 的条目，避免点击失败
   const data = useMemo(
     () => (events || []).filter((e) => e.slug && e.slug.trim().length > 0),
     [events]
@@ -38,9 +37,12 @@ export default function EventsAutoScroller({ events, durationSec = 6 }: Props) {
 
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const touchStartX = useRef<number | null>(null);
 
-  // 自动播放（悬停暂停）
+  // 移动端手势状态
+  const startXRef = useRef<number | null>(null);
+  const movedRef = useRef(false);
+
+  // 自动播放（悬停或手势中暂停）
   useEffect(() => {
     if (paused || data.length <= 1) return;
     const t = setInterval(() => {
@@ -49,20 +51,6 @@ export default function EventsAutoScroller({ events, durationSec = 6 }: Props) {
     return () => clearInterval(t);
   }, [paused, data.length, durationSec]);
 
-  // 手势滑动
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    if (touchStartX.current == null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    const threshold = 30;
-    if (Math.abs(delta) < threshold) return;
-    if (delta < 0) next();
-    else prev();
-  }
-
   function prev() {
     setIndex((i) => (i - 1 + data.length) % data.length);
   }
@@ -70,19 +58,52 @@ export default function EventsAutoScroller({ events, durationSec = 6 }: Props) {
     setIndex((i) => (i + 1) % data.length);
   }
 
+  // 触摸：开始
+  function onTouchStart(e: React.TouchEvent) {
+    if (!data.length) return;
+    startXRef.current = e.touches[0].clientX;
+    movedRef.current = false;
+    setPaused(true);
+  }
+  // 触摸：移动（阻止默认，避免页面跟随滚动）
+  function onTouchMove(e: React.TouchEvent) {
+    if (startXRef.current == null) return;
+    const delta = e.touches[0].clientX - startXRef.current;
+    if (Math.abs(delta) > 8) {
+      movedRef.current = true;
+      // 我们自定义横向滑动，阻止系统默认滚动
+      e.preventDefault();
+    }
+  }
+  // 触摸：结束（决定切换/不切换）
+  function onTouchEnd(e: React.TouchEvent) {
+    if (startXRef.current == null) return;
+    const delta = e.changedTouches[0].clientX - startXRef.current;
+    const threshold = 30;
+    if (Math.abs(delta) >= threshold) {
+      if (delta < 0) next();
+      else prev();
+    }
+    startXRef.current = null;
+    setPaused(false);
+  }
+
   if (!data.length) return null;
 
   const ev = data[index];
-  const cover = ev.cover || '/event-fallback.jpg'; // 兜底占位图（确保 /public 下有）
+  const cover = ev.cover || '/event-fallback.jpg';
 
   return (
     <div className="relative mx-auto w-full max-w-7xl py-10">
-      {/* 轮播主体：一次只显示一个竖版卡片，居中 */}
+      {/* 轮播主体：一次只显示一个竖版卡片，居中
+          touchAction: 'pan-y' 允许我们处理横向滑动，避免浏览器吞掉事件 */}
       <div
         className="flex items-center justify-center"
+        style={{ touchAction: 'pan-y' }}
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         <Link
@@ -101,7 +122,7 @@ export default function EventsAutoScroller({ events, durationSec = 6 }: Props) {
           {/* 顶部到中部的轻渐变，便于文字显示 */}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black/0" />
 
-          {/* 左上角：日期（英文）与标题（你让左上角显示，日期在最左上，标题紧随其后靠上） */}
+          {/* 左上角：日期（英文）与标题 */}
           <div className="absolute left-3 right-3 top-3 space-y-1">
             <div className="inline-block rounded bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white shadow">
               {formatDateEnglish(ev.date)}
@@ -111,7 +132,7 @@ export default function EventsAutoScroller({ events, durationSec = 6 }: Props) {
             </h3>
           </div>
 
-          {/* 右下角：BUY TICKETS 按钮（点击到详情页） */}
+          {/* 右下角：BUY TICKETS */}
           <div className="absolute bottom-3 right-3">
             <span className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-wider text-black transition group-hover:scale-[1.03]">
               Buy Tickets
