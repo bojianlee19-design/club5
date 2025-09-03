@@ -20,8 +20,6 @@ export default function EventsMarquee({
   durationSec?: number
 }) {
   const [paused, setPaused] = useState(false)
-
-  // 做成无缝滚动：重复两遍
   const loop = useMemo(() => [...events, ...events], [events])
 
   return (
@@ -43,15 +41,11 @@ export default function EventsMarquee({
             key={`${e.id}-${i}`}
             className="relative block h-44 w-72 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/30"
           >
-            {/* 封面图 */}
             {e.cover ? (
-              // 用 <img>，避免 next/image 跨域限制
               <img src={e.cover} alt={e.title} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center opacity-60">No cover</div>
             )}
-
-            {/* 渐变遮罩+文案 */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
               <div className="line-clamp-1 text-sm font-semibold">{e.title}</div>
               <div className="text-xs opacity-80">
@@ -62,7 +56,6 @@ export default function EventsMarquee({
         ))}
       </div>
 
-      {/* keyframes */}
       <style>{`
         @keyframes hc-marquee {
           0% { transform: translateX(0); }
