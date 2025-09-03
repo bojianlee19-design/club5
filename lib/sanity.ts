@@ -65,7 +65,8 @@ export async function getUpcomingEvents(limit = 20): Promise<EventItem[]> {
 }
 
 export async function getEventBySlug(slug: string): Promise<EventItem | null> {
-  const q = `*[_type == "event" && slug.current == $slug][0]{ ${EVENT_FIELDS} }`;
+  // 同时兼容 slug 为对象或纯字符串两种存法
+  const q = `*[_type == "event" && (slug.current == $slug || slug == $slug)][0]{ ${EVENT_FIELDS} }`;
   const d = await client.fetch<EventDoc | null>(
     q,
     { slug },
@@ -73,3 +74,6 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
   );
   return d ? mapEvent(d) : null;
 }
+
+/** ⬇️ 就加在这里：顶层、函数之后 */
+export { getUpcomingEvents as getEvents };
