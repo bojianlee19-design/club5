@@ -8,3 +8,13 @@
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
+/* ===== AutoScroller 动画（无 styled-jsx，无 client-only） ===== */
+@keyframes hc-marquee {
+  0%   { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee { animation: hc-marquee 28s linear infinite; }
+.pause-on-hover:hover .animate-marquee { animation-play-state: paused; }
+
+/* 页面总体深色背景兜底（若外层丢失 class 也能覆盖） */
+html, body { background-color: #000; color: #fff; }
