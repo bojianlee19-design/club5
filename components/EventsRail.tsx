@@ -1,26 +1,57 @@
 // components/EventsRail.tsx
 'use client';
 
-import EventCardWide, { type EventCard } from './EventCardWide';
+import Link from 'next/link';
+import { useRef } from 'react';
+import EventCardWide from './EventCardWide';
 
-export default function EventsRail({ events }: { events: EventCard[] }) {
-  if (!events?.length) return null;
+type Item = { slug: string; title: string; date?: string; cover?: string };
+
+export default function EventsRail({ events }: { events: Item[] }) {
+  const listRef = useRef<HTMLUListElement>(null);
+
+  const scrollByCard = (dir: number) => {
+    const el = listRef.current;
+    if (!el) return;
+    const card = el.querySelector('li') as HTMLLIElement | null;
+    const step = card ? card.clientWidth + 24 : 360; // 每次滚动一个卡片宽度
+    el.scrollBy({ left: dir * step, behavior: 'smooth' });
+  };
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
-      <ul className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
+    <div className="relative mx-auto w-full max-w-5xl">
+      {/* 左右按钮（桌面端显示） */}
+      <button
+        onClick={() => scrollByCard(-1)}
+        aria-label="Prev"
+        className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/15 p-2 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/25 md:block"
+      >
+        ←
+      </button>
+      <button
+        onClick={() => scrollByCard(1)}
+        aria-label="Next"
+        className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-white/15 p-2 text-white ring-1 ring-white/20 backdrop-blur hover:bg-white/25 md:block"
+      >
+        →
+      </button>
+
+      <ul
+        ref={listRef}
+        className="
+          mx-auto flex w-full gap-6 overflow-x-auto px-2 pb-2
+          [scroll-snap-type:x_proximity] snap-x
+          [-webkit-overflow-scrolling:touch] touch-pan-x overscroll-x-contain scroll-smooth
+        "
+      >
         {events.map((e) => (
           <li
-            key={e.id ?? (typeof e.slug === 'string' ? e.slug : (e.slug as any)?.current ?? Math.random().toString(36))}
-            className="snap-start w-[85%] min-w-[280px] md:w-[520px]"
+            key={e.slug}
+            className="snap-center w-[86vw] min-w-[280px] max-w-[420px] sm:w-[420px] md:w-[520px] mx-auto"
           >
-            <EventCardWide
-              id={e.id}
-              slug={typeof e.slug === 'string' ? e.slug : (e.slug as any)?.current ?? ''}
-              title={e.title ?? ''}
-              date={e.date}
-              cover={e.cover}
-            />
+            <Link href={`/events/${e.slug}`} className="block">
+              <EventCardWide slug={e.slug} title={e.title} date={e.date} cover={e.cover ?? undefined} />
+            </Link>
           </li>
         ))}
       </ul>
