@@ -13,8 +13,7 @@ export default async function EventDetail({ params }: { params: { slug: string }
     e?.cover ||
     e?.image?.asset?.url || e?.image?.url || e?.image ||
     e?.mainImage?.asset?.url || e?.mainImage?.url || e?.mainImage ||
-    e?.gallery?.[0]?.asset?.url || e?.gallery?.[0]?.url ||
-    ''
+    e?.gallery?.[0]?.asset?.url || e?.gallery?.[0]?.url || ''
 
   return (
     <main className="mx-auto max-w-4xl bg-black px-3 pb-24 pt-28 text-white">
