@@ -1,48 +1,34 @@
 // components/HeroTriptych.tsx
-import Link from 'next/link'
+import Link from 'next/link';
 
 type Props = {
-  src: string        // public 下视频路径，例如 /hero-b0.mp4
-  poster?: string
-}
+  src?: string;           // 传已有能播的 /hero-b0.mp4
+  poster?: string;        // 可选占位
+  href?: string;          // 点击跳转（默认 /events）
+};
 
-function V({ src, poster }: Props) {
+export default function HeroTriptych({ src = '/hero-b0.mp4', poster = '/hero-poster.jpg', href = '/events' }: Props) {
+  const common = "h-[78vh] w-full object-cover";
   return (
-    <video
-      className="h-full w-full object-cover"
-      src={src}
-      poster={poster}
-      muted
-      loop
-      playsInline
-      autoPlay
-      preload="metadata"
-    />
-  )
-}
+    <section className="relative">
+      {/* 点击覆盖层 */}
+      <Link href={href} className="absolute inset-0 z-10" aria-label="Go to What's On" />
 
-/**
- * 关键：不使用响应式断点，直接 grid-cols-3，确保任何屏幕都保持一行三格
- * 外层用 aspect-[16/9] 固定比例，避免视频换行。
- */
-export default function HeroTriptych({ src, poster }: Props) {
-  return (
-    <Link href="/events" aria-label="Go to What's On">
-      <section className="relative w-full overflow-hidden">
-        <div className="mx-auto aspect-[16/9] w-full">
-          <div className="grid h-full w-full grid-cols-3">
-            <V src={src} poster={poster} />
-            <V src={src} poster={poster} />
-            <V src={src} poster={poster} />
-          </div>
-        </div>
+      {/* 视频：md 以上三联，md 以下单联 */}
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        <video className={`${common}`} playsInline muted loop autoPlay preload="auto" poster={poster} src={src}/>
+        <video className={`${common} hidden md:block`} playsInline muted loop autoPlay preload="auto" poster={poster} src={src}/>
+        <video className={`${common} hidden md:block`} playsInline muted loop autoPlay preload="auto" poster={poster} src={src}/>
+      </div>
 
-        {/* 左下角文案 */}
-        <div className="pointer-events-none absolute left-6 bottom-6 z-10 select-none">
-          <div className="text-2xl font-extrabold tracking-wide md:text-3xl">HAZY CLUB</div>
-          <div className="opacity-80">NIGHTS · MUSIC · COMMUNITY</div>
+      {/* 中央文案 */}
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+        <div className="rounded-2xl bg-black/30 px-6 py-4 text-center backdrop-blur-md">
+          <h1 className="text-3xl font-extrabold tracking-widest md:text-5xl">HAZY CLUB</h1>
+          <p className="mt-2 text-sm md:text-base opacity-90">NIGHTS · MUSIC · COMMUNITY</p>
+          <p className="mt-3 text-xs opacity-70">Click to view events</p>
         </div>
-      </section>
-    </Link>
-  )
+      </div>
+    </section>
+  );
 }
