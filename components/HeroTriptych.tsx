@@ -1,41 +1,37 @@
 // components/HeroTriptych.tsx
-import Link from "next/link";
+import Link from 'next/link'
 
 type Props = {
-  /** 视频文件路径（public/ 下），比如 "/hero-b0.mp4" */
-  src: string;
-  /** 可选：poster 静态图 */
-  poster?: string;
-};
+  /** 可播放的视频 src（目前你可用 /hero-b0.mp4） */
+  src: string
+  /** 备用海报 */
+  poster?: string
+}
 
 export default function HeroTriptych({ src, poster }: Props) {
-  const sources = [src, src, src]; // 三联同源；以后想换成三段不同视频也很容易
-
   return (
-    <section className="relative bg-black">
-      {/* 整块可点击进入 What's On（/events） */}
-      <Link
-        href="/events"
-        aria-label="Go to What's On"
-        className="absolute inset-0 z-10"
-      />
-      {/* 容器：桌面三列，移动一列；高度与 MOS 相近 */}
-      <div className="mx-auto grid h-[70vh] max-w-7xl grid-cols-1 gap-2 px-2 md:h-[85vh] md:grid-cols-3">
-        {sources.map((s, i) => (
-          <video
-            key={i}
-            className="h-full w-full rounded-2xl object-cover"
-            autoPlay
-            muted
-            playsInline
-            loop
-            preload="metadata"
-            poster={poster}
-          >
-            <source src={s} type="video/mp4" />
-          </video>
-        ))}
-      </div>
+    <section className="relative mx-auto w-full max-w-[1600px] px-3 pt-24">
+      {/* 整块可点击进 What's On */}
+      <Link href="/events" className="block group">
+        <div className="grid aspect-[16/6] w-full grid-cols-3 gap-2 overflow-hidden rounded-3xl md:aspect-[16/5]">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="relative">
+              <video
+                className="absolute inset-0 h-full w-full object-cover"
+                src={src}
+                poster={poster}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+              {/* 轻微遮罩，提升文字/对比度（与 MOS 相似） */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent opacity-0 transition group-hover:opacity-100" />
+            </div>
+          ))}
+        </div>
+      </Link>
     </section>
-  );
+  )
 }
