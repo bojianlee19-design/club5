@@ -2,16 +2,10 @@
 'use client';
 
 type Props = {
-  /** 英雄视频（你现在用的 /hero-b0.mp4） */
   src: string;
-  /** 备用海报图 */
   poster?: string;
 };
 
-/**
- * 桌面端：三联视频（md 及以上显示 3 列）
- * 移动端：单个视频，竖向高度占满整屏（100svh/100vh）
- */
 export default function HeroTriptych({ src, poster }: Props) {
   return (
     <div className="relative w-full overflow-hidden bg-black min-h-screen min-h-[100svh] md:min-h-[80vh]">
@@ -30,11 +24,21 @@ export default function HeroTriptych({ src, poster }: Props) {
               poster={poster}
             >
               <source src={src} type="video/mp4" />
-              {/* 如后面补了 webm，也可加：
-              <source src="/hero-b0.webm" type="video/webm" /> */}
             </video>
           </div>
         ))}
+      </div>
+
+      {/* 中心文案（不遮挡点击） */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-extrabold tracking-[0.18em] text-white drop-shadow md:text-6xl">
+            HAZY&nbsp;CLUB
+          </h1>
+          <p className="mt-3 text-xs font-semibold tracking-[0.22em] text-white/85 md:text-sm">
+            NIGHTS · MUSIC · COMMUNITY
+          </p>
+        </div>
       </div>
     </div>
   );
