@@ -1,36 +1,49 @@
 // app/page.tsx
-import HeroTriptych from '@/components/HeroTriptych'
-import EventsAutoScroller, { EventItem } from '@/components/EventsAutoScroller'
-import { getUpcomingEvents } from '@/lib/sanity'
-import Link from 'next/link'
+import TopNav from "@/components/TopNav";
+import HeroTriptych from "@/components/HeroTriptych";
+import EventsAutoScroller from "@/components/EventsAutoScroller";
+import { getUpcomingEvents } from "@/lib/sanity";
+
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const docs = await getUpcomingEvents(20)
-  const events: EventItem[] = docs.map((d) => ({
-    id: d._id,
-    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current ?? '',
-    title: d.title ?? '',
-    date: d.date,
-    cover: d.cover, // 已经是 URL
-  }))
+  // 兼容你的 lib/sanity：此方法不接收参数
+  const events = (await getUpcomingEvents()) as any[];
 
   return (
     <main className="bg-black text-white">
-      {/* 英雄：三联横向并排（整块可点击进入 /events） */}
-      <HeroTriptych src="/hero-b0.mp4" poster="/hero-poster.jpg" height="80vh" />
+      <TopNav />
 
-      {/* What’s On 标题 + View all */}
-      <section className="mx-auto w-full max-w-7xl px-4 py-10">
-        <div className="mb-6 flex items-end justify-between">
-          <h2 className="text-2xl font-extrabold tracking-wide">What’s On</h2>
-          <Link href="/events" className="underline opacity-80 hover:opacity-100">
-            View all →
-          </Link>
-        </div>
+      {/* 英雄：横向三联视频（整块可点击进入 /events） */}
+      <HeroTriptych src="/hero-b0.mp4" />
 
-        {/* 自动滚动活动推送（居中、悬停暂停） */}
+      {/* 英雄下方：居中自动滚动活动 */}
+      <section className="mx-auto my-10 max-w-7xl px-4">
+        <h2 className="mb-4 text-center text-xl font-semibold tracking-wide">
+          What’s On
+        </h2>
         <EventsAutoScroller events={events} durationSec={28} />
       </section>
+
+      {/* 页脚（恢复地址 & 联系方式） */}
+      <footer className="mt-16 border-t border-white/10">
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-10 md:grid-cols-3">
+          <div>
+            <div className="font-bold">Visit us</div>
+            <div>28 Eyre St, Sheffield City Centre, Sheffield S1 4QY</div>
+          </div>
+          <div>
+            <div className="font-bold">Contact</div>
+            <a href="mailto:matt@hazyclub.co.uk" className="underline">
+              matt@hazyclub.co.uk
+            </a>
+          </div>
+          <div>
+            <div className="font-bold">Follow</div>
+            <div>@hazyclub</div>
+          </div>
+        </div>
+      </footer>
     </main>
-  )
+  );
 }
