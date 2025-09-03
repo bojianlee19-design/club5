@@ -1,4 +1,5 @@
 // components/EventCardWide.tsx
+import Image from 'next/image';
 import Link from 'next/link';
 
 export type EventCard = {
@@ -9,33 +10,51 @@ export type EventCard = {
   cover?: string;
 };
 
-export default function EventCardWide({ id, slug, title, date, cover }: EventCard) {
-  const href = `/events/${slug}`;
+export default function EventCardWide(props: EventCard) {
+  const { slug, title, date, cover } = props;
+
   return (
     <Link
-      href={href}
-      className="group relative block w-[280px] snap-center overflow-hidden rounded-2xl bg-neutral-900 shadow-lg hover:shadow-xl"
-      key={id}
+      href={`/events/${slug}`}
+      className="group relative block overflow-hidden rounded-3xl"
     >
-      {/* 封面（用 <img> 避免 Next Image 域名限制） */}
-      <div className="relative aspect-[3/4] w-full bg-neutral-800">
+      {/* 16:9 容器 */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden">
+        {/* 封面图 */}
         {cover ? (
-          <img src={cover} alt={title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <Image
+            src={cover}
+            alt={title}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-neutral-400">No cover</div>
+          <div className="h-full w-full bg-gradient-to-br from-neutral-800 to-neutral-900" />
         )}
-      </div>
 
-      {/* 左下标题 / 右下按钮 */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end p-3">
-        <div className="rounded-lg bg-black/50 px-2 py-1 text-sm font-semibold backdrop-blur">{title}</div>
-        <div className="mt-2 flex items-center justify-between">
-          <div className="rounded-md bg-black/40 px-2 py-1 text-xs backdrop-blur">
-            {date ? new Date(date).toLocaleDateString() : ''}
-          </div>
-          <div className="pointer-events-auto">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-black">BUY TICKETS</span>
-          </div>
+        {/* 顶部渐变遮罩 + 左上角文字（标题 + 日期） */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/70 to-transparent" />
+        <div className="absolute left-4 top-3 flex max-w-[75%] flex-col text-white drop-shadow">
+          <h3 className="text-lg font-extrabold tracking-wide md:text-xl">
+            {title}
+          </h3>
+          {date ? (
+            <div className="mt-0.5 text-xs opacity-90 md:text-sm">
+              {new Date(date).toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                weekday: 'short',
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        {/* 右下角 BUY TICKETS */}
+        <div className="absolute bottom-3 right-3">
+          <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-black transition-colors group-hover:bg-white">
+            BUY TICKETS
+          </span>
         </div>
       </div>
     </Link>
