@@ -1,71 +1,66 @@
 // components/TopNav.tsx
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useState } from "react";
+import Link from 'next/link'
+import { useState } from 'react'
 
-/** 顶部居中胶囊导航：Menu / Tables / Tickets（样式 & 交互参考 MOS） */
 export default function TopNav() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-50">
-      {/* 居中主导航 */}
-      <div className="mx-auto flex max-w-7xl justify-center pt-4">
-        <div className="pointer-events-auto rounded-full bg-black/60 px-4 py-2 backdrop-blur">
-          <nav className="flex items-center gap-6 text-sm font-medium uppercase tracking-wide">
+    <>
+      {/* 顶部居中三项：Menu / Tables / Tickets */}
+      <nav className="pointer-events-none fixed left-1/2 top-4 z-50 -translate-x-1/2">
+        <ul className="pointer-events-auto flex items-center gap-6 text-sm font-bold tracking-wide">
+          <li>
             <button
-              onClick={() => setOpen((v) => !v)}
-              className="hover:opacity-80"
+              onClick={() => setOpen(v => !v)}
+              className="rounded-full bg-white/10 px-4 py-2 backdrop-blur transition hover:bg-white/20"
+              aria-expanded={open}
             >
               Menu
             </button>
-            <Link href="/tables" className="hover:opacity-80">
+          </li>
+          <li>
+            <Link
+              href="/tables"
+              className="rounded-full bg-white/10 px-4 py-2 backdrop-blur transition hover:bg-white/20"
+            >
               Tables
             </Link>
-            <Link href="/events" className="hover:opacity-80">
+          </li>
+          <li>
+            <Link
+              href="/events"
+              className="rounded-full bg-white px-4 py-2 text-black transition hover:bg-white/90"
+            >
               Tickets
             </Link>
-          </nav>
-        </div>
-      </div>
+          </li>
+        </ul>
+      </nav>
 
-      {/* Menu 下拉面板（非弹窗），置于导航正下方 */}
+      {/* Menu 下拉（居中） */}
       {open && (
-        <div className="pointer-events-auto">
-          <div className="mx-auto mt-2 flex max-w-7xl justify-center">
-            <div className="rounded-2xl bg-black/80 p-6 shadow-lg backdrop-blur">
-              <ul className="grid grid-cols-2 gap-4 text-base">
-                <li>
-                  <Link onClick={() => setOpen(false)} href="/events" className="hover:opacity-80">
-                    What’s On
-                  </Link>
-                </li>
-                <li>
-                  <Link onClick={() => setOpen(false)} href="/membership" className="hover:opacity-80">
-                    Membership
-                  </Link>
-                </li>
-                <li>
-                  <Link onClick={() => setOpen(false)} href="/venue-hire" className="hover:opacity-80">
-                    Venue Hire
-                  </Link>
-                </li>
-                <li>
-                  <Link onClick={() => setOpen(false)} href="/about" className="hover:opacity-80">
-                    About Our Club
-                  </Link>
-                </li>
-                <li className="col-span-2">
-                  <Link onClick={() => setOpen(false)} href="/contact" className="hover:opacity-80">
-                    Contact Us
-                  </Link>
-                </li>
-              </ul>
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="absolute left-1/2 top-20 w-[min(92vw,720px)] -translate-x-1/2 rounded-2xl bg-neutral-900 p-6 shadow-2xl ring-1 ring-white/10"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+              <Link className="hc-menu-item" href="/events">What’s On</Link>
+              <Link className="hc-menu-item" href="/membership">Membership</Link>
+              <Link className="hc-menu-item" href="/venue-hire">Venue Hire</Link>
+              <Link className="hc-menu-item" href="/about">About Our Club</Link>
+              <Link className="hc-menu-item" href="/contact">Contact Us</Link>
+              <Link className="hc-menu-item" href="/gallery">Gallery</Link>
             </div>
           </div>
         </div>
       )}
-    </div>
-  );
+    </>
+  )
 }
