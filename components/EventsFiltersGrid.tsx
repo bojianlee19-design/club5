@@ -91,9 +91,16 @@ function Calendar({
 
   return (
     <div
-      ref={ref}
-      className="absolute z-30 mt-2 w-72 rounded-xl border border-white/15 bg-black/80 p-3 text-white shadow-xl backdrop-blur"
-    >
+  ref={ref}
+  className="
+    absolute top-full z-30 mt-2
+    w-72 max-w-[92vw]  /* 防越屏：小屏时最多占 92vw */
+    right-0 md:left-0 md:right-auto  /* 移动端靠右贴齐，桌面靠左 */
+    rounded-xl border border-white/15 bg-black/80 p-3 text-white shadow-xl backdrop-blur
+    origin-top-right md:origin-top-left
+  "
+>
+
       <div className="mb-2 flex items-center justify-between">
         <button
           aria-label="Previous month"
