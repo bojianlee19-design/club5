@@ -40,6 +40,16 @@ export default defineType({
       type: 'array',
       of: [{ type: 'string' }],
     }),
+
+    // <<<<<< 在这里新增 genres（可放在 lineup 后、tags 前） >>>>>>
+    defineField({
+      name: 'genres',
+      title: 'Genres',
+      type: 'array',
+      of: [{ type: 'string' }],
+      options: { layout: 'tags' }, // Studio 里是“标签”输入体验
+    }),
+
     defineField({
       name: 'summary',
       type: 'text',
