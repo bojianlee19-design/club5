@@ -2,7 +2,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getEventDetailBySlug } from '@/lib/sanity';
+import { getEventBySlug } from '@/lib/sanity';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,8 @@ function RichText({ value }: { value?: any[] }) {
 }
 
 export default async function EventDetailPage({ params }: Props) {
-  const ev = await getEventDetailBySlug(params.slug);
+  const ev = await getEventBySlug(params.slug);
+
   if (!ev) return notFound();
 
   const dateStr = ev.date
