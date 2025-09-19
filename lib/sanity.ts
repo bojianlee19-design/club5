@@ -8,13 +8,14 @@ export const client = createClient({
   useCdn: false,
 });
 
-/* -------------------- Event 类型与映射 -------------------- */
 export type EventDoc = {
   _id: string;
   slug?: { current: string } | string;
   title?: string;
   date?: string;
   cover?: string;
+  summary?: string;
+  body?: unknown; // 富文本（Portable Text），用 unknown/any 以避免类型束缚
 };
 
 export type EventItem = {
@@ -23,8 +24,11 @@ export type EventItem = {
   title: string;
   date?: string;
   cover?: string;
+  summary?: string;
+  body?: unknown;
 };
 
+// 统一映射函数
 function mapEvent(d: EventDoc): EventItem {
   return {
     id: d._id,
@@ -32,10 +36,12 @@ function mapEvent(d: EventDoc): EventItem {
     title: d.title || 'Untitled',
     date: d.date,
     cover: d.cover,
+    summary: d.summary,
+    body: d.body,
   };
 }
 
-// 统一字段：兼容 cover / mainImage / image / poster
+// 兼容不同封面字段：cover / mainImage / image / poster
 const EVENT_FIELDS = `
   _id,
   "slug": coalesce(slug.current, slug),
@@ -46,7 +52,9 @@ const EVENT_FIELDS = `
     mainImage.asset->url,
     image.asset->url,
     poster.asset->url
-  )
+  ),
+  summary,
+  body
 `;
 
 export async function getUpcomingEvents(limit = 20): Promise<EventItem[]> {
@@ -65,71 +73,11 @@ export async function getUpcomingEvents(limit = 20): Promise<EventItem[]> {
 }
 
 export async function getEventBySlug(slug: string): Promise<EventItem | null> {
-  const q = `
-    *[_type == "event" && (slug.current == $slug || slug == $slug)][0]{
-      ${EVENT_FIELDS}
-    }
-  `;
+  const q = `*[_type == "event" && slug.current == $slug][0]{ ${EVENT_FIELDS} }`;
   const d = await client.fetch<EventDoc | null>(
     q,
     { slug },
     { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
   );
   return d ? mapEvent(d) : null;
-}
-
-/* -------------------- Tables（可选） -------------------- */
-export type TableItem = {
-  id: string;
-  slug: string;
-  title: string;
-  cover?: string;
-};
-
-const TABLE_FIELDS = `
-  _id,
-  "slug": coalesce(slug.current, slug),
-  title,
-  "cover": coalesce(
-    cover.asset->url,
-    mainImage.asset->url,
-    image.asset->url,
-    poster.asset->url
-  )
-`;
-
-export async function getTables(limit = 50): Promise<TableItem[]> {
-  const q = `
-    *[_type == "table"]
-      | order(_createdAt desc)[0...$limit]{
-        ${TABLE_FIELDS}
-      }
-  `;
-  const docs = await client.fetch<any[]>(
-    q,
-    { limit },
-    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
-  );
-  return docs.map((d) => ({
-    id: d._id,
-    slug: d.slug ?? '',
-    title: d.title ?? 'Untitled',
-    cover: d.cover,
-  }));
-}
-
-export async function getTableBySlug(slug: string): Promise<TableItem | null> {
-  const q = `
-    *[_type == "table" && (slug.current == $slug || slug == $slug)][0]{
-      ${TABLE_FIELDS}
-    }
-  `;
-  const d = await client.fetch<any | null>(
-    q,
-    { slug },
-    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
-  );
-  return d
-    ? { id: d._id, slug: d.slug ?? '', title: d.title ?? 'Untitled', cover: d.cover }
-    : null;
 }
