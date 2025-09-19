@@ -1,230 +1,166 @@
 // lib/sanity.ts
-import { createClient } from 'next-sanity';
+import { createClient } from 'next-sanity'
 
+// —— Sanity Client ————————————————————————————————————————————
 export const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
   apiVersion: '2024-01-01',
   useCdn: false,
-});
+})
 
-/** --- Sanity 原始文档 --- */
+// —— 类型（保持与你现有使用兼容） ——————————————————————————————
 export type EventDoc = {
-  _id: string;
-  slug?: { current: string } | string;
-  title?: string;
-  date?: string;
-  cover?: string;
-  // 详情页可能用到的字段（都可选）
-  summary?: string;
-  body?: unknown[];          // Portable Text
-  venue?: string;
-  doorsTime?: string;
-  endTime?: string;
-  ageRestriction?: string;
-  price?: string;
-  ticketUrl?: string;
-  lineup?: string[];
-  gallery?: string[];
-};
+  _id: string
+  slug?: { current: string } | string
+  title?: string
+  date?: string
+  cover?: string
+  // 兼容不同封面字段（映射时统一到 cover）
+  mainImage?: { asset?: { url?: string } }
+  image?: { asset?: { url?: string } }
+  poster?: { asset?: { url?: string } }
+  // 新增：用于 Refine 的风格标签
+  genres?: string[]
+}
 
-/** --- 前端统一使用的类型（列表/详情通用，详情字段为可选） --- */
 export type EventItem = {
-  id: string;
-  slug: string;
-  title: string;
-  date?: string;
-  cover?: string;
-
-  // 详情页可用（列表查询不会取这些，但类型上允许存在）
-  summary?: string;
-  body?: unknown[];
-  venue?: string;
-  doorsTime?: string;
-  endTime?: string;
-  ageRestriction?: string;
-  price?: string;
-  ticketUrl?: string;
-  lineup?: string[];
-  gallery?: string[];
-};
-
-/** 统一映射函数 */
-function mapEvent(d: EventDoc): EventItem {
-  return {
-    id: d._id,
-    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || '',
-    title: d.title || 'Untitled',
-    date: d.date,
-    cover: d.cover,
-
-    summary: d.summary,
-    body: d.body,
-    venue: d.venue,
-    doorsTime: d.doorsTime,
-    endTime: d.endTime,
-    ageRestriction: d.ageRestriction,
-    price: d.price,
-    ticketUrl: d.ticketUrl,
-    lineup: d.lineup,
-    gallery: d.gallery,
-  };
+  id: string
+  slug: string
+  title: string
+  date?: string
+  cover?: string
+  genres?: string[]
 }
 
-/** 封面字段兼容：cover / mainImage / image / poster */
-const COVER_EXPR = `
-  coalesce(
-    cover.asset->url,
-    mainImage.asset->url,
-    image.asset->url,
-    poster.asset->url
-  )
-`;
-
-/** 列表用的轻量字段（首页/列表页） */
-const EVENT_FIELDS_LIST = `
+// —— 统一字段与映射 ————————————————————————————————————————
+const EVENT_FIELDS = `
   _id,
   "slug": coalesce(slug.current, slug),
   title,
   date,
-  "cover": ${COVER_EXPR}
-`;
-
-/** 详情页用的完整字段 */
-const EVENT_FIELDS_DETAIL = `
-  _id,
-  "slug": coalesce(slug.current, slug),
-  title,
-  date,
-  "cover": ${COVER_EXPR},
-  summary,
-  body,
-  venue,
-  doorsTime,
-  endTime,
-  ageRestriction,
-  price,
-  ticketUrl,
-  lineup[],
-  "gallery": coalesce(
-    gallery[].asset->url,
-    []
-  )
-`;
-
-/** 获取最近活动（用于首页、列表） */
-export async function getUpcomingEvents(limit = 20): Promise<EventItem[]> {
-  const q = `
-    *[_type == "event"]
-      | order(coalesce(date, _createdAt) desc)[0...$limit]{
-        ${EVENT_FIELDS_LIST}
-      }
-  `;
-  const docs = await client.fetch<EventDoc[]>(
-    q,
-    { limit },
-    { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
-  );
-  return docs.map(mapEvent);
-}
-
-/** 根据 slug 获取单条活动（用于详情页） */
-export async function getEventBySlug(slug: string): Promise<EventItem | null> {
-  const q = `*[_type == "event" && slug.current == $slug][0]{ ${EVENT_FIELDS_DETAIL} }`;
-  const d = await client.fetch<EventDoc | null>(
-    q,
-    { slug },
-    { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
-  );
-  return d ? mapEvent(d) : null;
-}
-// -------------------------------
-// Tables helpers (add below events helpers)
-// -------------------------------
-
-export type TableDoc = {
-  _id: string;
-  slug?: { current: string } | string;
-  title?: string;
-  price?: string;          // 自由文本，如 "from £300"
-  minSpend?: string;       // 可选
-  description?: string;    // 可选
-  cover?: string;          // 统一映射后的图片 URL
-  image?: { asset?: { url?: string } }; // 兼容旧字段
-  mainImage?: { asset?: { url?: string } };
-  poster?: { asset?: { url?: string } };
-};
-
-export type TableItem = {
-  id: string;
-  slug: string;
-  title: string;
-  price?: string;
-  minSpend?: string;
-  description?: string;
-  cover?: string;
-};
-
-function mapTable(d: TableDoc): TableItem {
-  const slug =
-    typeof d.slug === 'string' ? d.slug : d.slug?.current || '';
-  // 与 Event 一样做封面字段兼容
-  const cover =
-    d.cover ||
-    d.mainImage?.asset?.url ||
-    d.image?.asset?.url ||
-    d.poster?.asset?.url;
-
-  return {
-    id: d._id,
-    slug,
-    title: d.title || 'Untitled',
-    price: d.price,
-    minSpend: d.minSpend,
-    description: d.description,
-    cover,
-  };
-}
-
-// 统一字段选择（尽量兼容不同历史字段名）
-const TABLE_FIELDS = `
-  _id,
-  "slug": coalesce(slug.current, slug),
-  title,
-  price,
-  minSpend,
-  description,
+  genres,
   "cover": coalesce(
     cover.asset->url,
     mainImage.asset->url,
     image.asset->url,
     poster.asset->url
   )
-`;
+`
 
-// 列表：按创建时间倒序（可按需改 order）
-export async function getTables(limit = 50): Promise<TableItem[]> {
-  const q = `
-    *[_type == "table"]
-      | order(_createdAt desc)[0...$limit]{
-        ${TABLE_FIELDS}
-      }
-  `;
-  const docs = await client.fetch<TableDoc[]>(
-    q,
-    { limit },
-    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
-  );
-  return docs.map(mapTable);
+function mapEvent(d: EventDoc): EventItem {
+  return {
+    id: d._id,
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || '',
+    title: d.title || 'Untitled',
+    date: d.date,
+    cover: d.cover ||
+      d.mainImage?.asset?.url ||
+      d.image?.asset?.url ||
+      d.poster?.asset?.url,
+    genres: d.genres || [],
+  }
 }
 
-// 详情
-export async function getTableBySlug(slug: string): Promise<TableItem | null> {
-  const q = `*[_type == "table" && slug.current == $slug][0]{ ${TABLE_FIELDS} }`;
-  const doc = await client.fetch<TableDoc | null>(
+// —— 查询参数与工具 ————————————————————————————————————————
+export type GetEventsOptions = {
+  limit?: number
+  range?: 'all' | 'week' | 'month'
+  from?: string // YYYY-MM-DD
+  to?: string   // YYYY-MM-DD
+  genres?: string[] // 多选
+}
+
+// 计算日期区间
+function getRangeDates(range?: 'all' | 'week' | 'month') {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const isoDate = (d: Date) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
+
+  if (range === 'week') {
+    const to = new Date(now)
+    to.setUTCDate(now.getUTCDate() + 7)
+    return { from: isoDate(now), to: isoDate(to) }
+  }
+  if (range === 'month') {
+    const to = new Date(now)
+    to.setUTCMonth(now.getUTCMonth() + 1)
+    return { from: isoDate(now), to: isoDate(to) }
+  }
+  return {}
+}
+
+// —— 列表：支持筛选（兼容旧签名） ————————————————————————————
+export async function getUpcomingEvents(
+  arg?: number | GetEventsOptions
+): Promise<EventItem[]> {
+  const opts: GetEventsOptions =
+    typeof arg === 'number' ? { limit: arg } : (arg || {})
+
+  const limit = typeof opts.limit === 'number' ? opts.limit : 60
+
+  // 计算最终 from/to
+  let from = opts.from
+  let to = opts.to
+  if (opts.range && (!from || !to)) {
+    const r = getRangeDates(opts.range)
+    from = from || r.from
+    to = to || r.to
+  }
+
+  // 组装 GROQ 条件
+  const conds: string[] = ['_type == "event"']
+  // 只取未来或未填写日期的活动可按需修改：这里不过滤历史，交给 range/from/to 控制
+  if (from) conds.push(`defined(date) && date >= $from`)
+  if (to) conds.push(`defined(date) && date < $to`)
+  if (opts.genres && opts.genres.length > 0) {
+    // 只要包含任意一个所选风格
+    conds.push(`count(genres[@ in $genres]) > 0`)
+  }
+
+  const where = conds.length ? `*[${conds.join(' && ')}]` : `*[]`
+
+  const query = `
+    ${where}
+    | order(coalesce(date, _createdAt) asc)[0...$limit]{
+      ${EVENT_FIELDS}
+    }
+  `
+
+  const params: Record<string, any> = { limit }
+  if (from) params.from = from
+  if (to) params.to = to
+  if (opts.genres && opts.genres.length > 0) params.genres = opts.genres
+
+  const docs = await client.fetch<EventDoc[]>(
+    query,
+    params,
+    { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
+  )
+  return docs.map(mapEvent)
+}
+
+// —— 兼容历史导出名（你项目以前有地方 import getEvents） ———————
+export const getEvents = (limit = 100) => getUpcomingEvents({ limit })
+
+// —— 详情 ————————————————————————————————————————————————
+export async function getEventBySlug(slug: string): Promise<EventItem | null> {
+  const q = `*[_type == "event" && coalesce(slug.current, slug) == $slug][0]{ ${EVENT_FIELDS} }`
+  const d = await client.fetch<EventDoc | null>(
     q,
     { slug },
-    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
-  );
-  return doc ? mapTable(doc) : null;
+    { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
+  )
+  return d ? mapEvent(d) : null
+}
+
+// —— 取所有可用的 genres（用于 Refine 下拉） ——————————————
+export async function getAllGenres(): Promise<string[]> {
+  const q = `array::unique(*[_type=="event" && defined(genres)].genres[])|order(@ asc)`
+  const list = await client.fetch<string[]>(
+    q,
+    {},
+    { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
+  )
+  return list || []
 }
