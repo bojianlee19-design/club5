@@ -118,4 +118,91 @@ export async function getEventDetailBySlug(slug: string): Promise<EventDetail | 
     gallery: Array.isArray(d.gallery) ? d.gallery : undefined,
     body: Array.isArray(d.body) ? d.body : undefined,
   };
+// lib/sanity.ts（在文件底部追加，不要改你已有的导出）
+export type TableDoc = {
+  _id: string
+  slug?: { current: string } | string
+  title?: string
+  capacity?: number
+  minSpend?: string
+  price?: string
+  perks?: string[]
+  summary?: string
+  image?: any
+  bookingUrl?: string
+  order?: number
+  active?: boolean
 }
+
+export type TableItem = {
+  id: string
+  slug: string
+  title: string
+  capacity?: number
+  minSpend?: string
+  price?: string
+  perks?: string[]
+  summary?: string
+  cover?: string
+  bookingUrl?: string
+  order?: number
+}
+
+const TABLE_FIELDS = `
+  _id,
+  "slug": coalesce(slug.current, slug),
+  title,
+  capacity,
+  minSpend,
+  price,
+  perks,
+  summary,
+  "cover": coalesce(image.asset->url, gallery[0].asset->url),
+  bookingUrl,
+  order,
+  active
+`
+
+function mapTable(d: TableDoc): TableItem {
+  return {
+    id: d._id,
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || '',
+    title: d.title || 'Untitled',
+    capacity: d.capacity,
+    minSpend: d.minSpend,
+    price: d.price,
+    perks: d.perks,
+    summary: d.summary,
+    cover: (d as any).cover,
+    bookingUrl: d.bookingUrl,
+    order: d.order,
+  }
+}
+
+/** 取可展示的所有桌台套餐 */
+export async function getTables(): Promise<TableItem[]> {
+  const q = `
+    *[_type == "table" && coalesce(active,true) == true]
+      | order(coalesce(order, 999) asc, title asc){
+        ${TABLE_FIELDS}
+      }
+  `
+  const docs = await client.fetch<TableDoc[]>(
+    q,
+    {},
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+  )
+  return docs.map(mapTable)
+}
+
+/** 按 slug 取单个桌台套餐 */
+export async function getTableBySlug(slug: string): Promise<TableItem | null> {
+  const q = `*[_type == "table" && slug.current == $slug][0]{ ${TABLE_FIELDS} }`
+  const d = await client.fetch<TableDoc | null>(
+    q,
+    { slug },
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+  )
+  return d ? mapTable(d) : null
+}
+
