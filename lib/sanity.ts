@@ -120,18 +120,42 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
  * 临时 tables 数据（为避免构建时报 “getTables 未导出”）
  * 以后接入 Sanity 时，把这里换成真实查询即可。
  */
-export type TableItem = {
-  id: string;
-  name: string;
-  desc?: string;
-  link?: string;
+// lib/sanity.ts  ——— 在现有内容里补充 / 覆盖 Table 相关定义
+
+export type TableDoc = {
+  _id: string;
+  slug?: { current: string } | string;
+  title?: string;
+  cover?: string;
 };
 
+export type TableItem = {
+  id: string;
+  slug: string;          // <-- 关键：显式包含 slug
+  title: string;
+  cover?: string;
+};
+
+// 兼容不同封面字段：cover / image 等
+const TABLE_FIELDS = `
+  _id,
+  "slug": coalesce(slug.current, slug, _id),
+  title,
+  "cover": coalesce(cover.asset->url, image.asset->url)
+`;
+
 export async function getTables(): Promise<TableItem[]> {
-  // 占位：返回空数组即可满足页面渲染
-  return [];
-  // 如果将来有 schema，可改成类似：
-  // const q = `*[_type == "table"]{ _id, name, desc, link }`;
-  // const rows = await client.fetch<any[]>(q);
-  // return rows.map(r => ({ id: r._id, name: r.name, desc: r.desc, link: r.link }));
+  const q = `*[_type == "table"]{ ${TABLE_FIELDS} }`;
+  const docs = await client.fetch<TableDoc[]>(
+    q,
+    {},
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+  );
+
+  return docs.map((d) => ({
+    id: d._id,
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || d._id,
+    title: d.title || 'Table',
+    cover: d.cover,
+  }));
 }
