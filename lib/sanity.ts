@@ -153,22 +153,20 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
   return d ? toEventItem(d) : null;
 }
 
-/* =========================
-// —— Tables —— 追加到 lib/sanity.ts 末尾（保留你已有的 Events 代码）
-// 类型：Sanity 原始文档
+// ======= Tables (追加在文件末尾，保持你现有的 Events 代码不变) =======
+
 export type TableDoc = {
   _id: string;
   slug?: { current: string } | string;
   title?: string;
-  price?: string;                // 自由文本价格
-  summary?: string;              // 简述
-  perks?: string[];              // 权益列表
-  capacity?: string;             // 可选：人数/容量
-  cover?: string;                // 兜底后的主图 URL（下方 GROQ 会映射出来）
-  gallery?: string[];            // 兜底后的图集 URL 数组
+  price?: string;
+  summary?: string;
+  perks?: string[];
+  capacity?: string;
+  cover?: string;
+  gallery?: string[];
 };
 
-// 类型：供前端页面使用的干净结构
 export type TableItem = {
   id: string;
   slug: string;
@@ -181,7 +179,7 @@ export type TableItem = {
   gallery?: string[];
 };
 
-// 统一映射（把可能为 undefined 的字段做兜底）
+// 统一映射
 function mapTable(d: TableDoc): TableItem {
   return {
     id: d._id,
@@ -212,17 +210,17 @@ const TABLE_FIELDS = `
     image.asset->url,
     poster.asset->url
   ),
-  // 图集 URL 兜底（若 schema 用 gallery: [{image}] 或 images: [{image}] 都尝试取）
+  // 图集 URL 兜底
   "gallery": coalesce(
     gallery[].asset->url,
     images[].asset->url
   )
 `;
 
-// 列表：取所有桌位产品（或按需求限制数量/排序）
+// 列表
 export async function getTables(limit = 50): Promise<TableItem[]> {
   const q = `
-    *[_type == "table"] 
+    *[_type == "table"]
       | order(title asc)[0...$limit]{
         ${TABLE_FIELDS}
       }
@@ -235,7 +233,7 @@ export async function getTables(limit = 50): Promise<TableItem[]> {
   return docs.map(mapTable);
 }
 
-// 详情：通过 slug 取单个桌位产品
+// 详情
 export async function getTableBySlug(slug: string): Promise<TableItem | null> {
   const q = `*[_type == "table" && slug.current == $slug][0]{ ${TABLE_FIELDS} }`;
   const d = await client.fetch<TableDoc | null>(
