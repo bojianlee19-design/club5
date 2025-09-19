@@ -161,15 +161,26 @@ export type TableItem = {
   id: string;
   slug: string;
   title: string;
-  // 需要时可扩展更多字段
+  cover?: string;
+  // 新增：页面已使用到的字段
+  capacity?: number | string;
+  minSpend?: string;
+  price?: string;
+  // 可选：其他描述
+  description?: string;
 };
-
-export async function getTables(): Promise<TableItem[]> {
-  // TODO: 之后有了 sanity 的 table schema 再补真实查询
-  return [];
-}
-
-export async function getTableBySlug(_slug: string): Promise<TableItem | null> {
-  // TODO: 之后补真实查询
-  return null;
+export async function getTableBySlug(slug: string): Promise<TableItem | null> {
+  const q = `*[_type == "table" && slug.current == $slug][0]{ ${TABLE_FIELDS} }`;
+  const d = await client.fetch<any>(q, { slug }, { cache: 'no-store' });
+  if (!d) return null;
+  return {
+    id: d._id,
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || '',
+    title: d.title || 'Untitled',
+    cover: d.cover,
+    capacity: d.capacity,
+    minSpend: d.minSpend,
+    price: d.price,
+    description: d.description,
+  };
 }
