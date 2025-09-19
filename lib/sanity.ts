@@ -154,33 +154,94 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
 }
 
 /* =========================
- * Tables (占位导出，防止构建报错)
- * =======================*/
+// —— Tables —— 追加到 lib/sanity.ts 末尾（保留你已有的 Events 代码）
+// 类型：Sanity 原始文档
+export type TableDoc = {
+  _id: string;
+  slug?: { current: string } | string;
+  title?: string;
+  price?: string;                // 自由文本价格
+  summary?: string;              // 简述
+  perks?: string[];              // 权益列表
+  capacity?: string;             // 可选：人数/容量
+  cover?: string;                // 兜底后的主图 URL（下方 GROQ 会映射出来）
+  gallery?: string[];            // 兜底后的图集 URL 数组
+};
 
+// 类型：供前端页面使用的干净结构
 export type TableItem = {
   id: string;
   slug: string;
   title: string;
-  cover?: string;
-  // 新增：页面已使用到的字段
-  capacity?: number | string;
-  minSpend?: string;
   price?: string;
-  // 可选：其他描述
-  description?: string;
+  summary?: string;
+  perks?: string[];
+  capacity?: string;
+  cover?: string;
+  gallery?: string[];
 };
-export async function getTableBySlug(slug: string): Promise<TableItem | null> {
-  const q = `*[_type == "table" && slug.current == $slug][0]{ ${TABLE_FIELDS} }`;
-  const d = await client.fetch<any>(q, { slug }, { cache: 'no-store' });
-  if (!d) return null;
+
+// 统一映射（把可能为 undefined 的字段做兜底）
+function mapTable(d: TableDoc): TableItem {
   return {
     id: d._id,
     slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || '',
     title: d.title || 'Untitled',
-    cover: d.cover,
-    capacity: d.capacity,
-    minSpend: d.minSpend,
     price: d.price,
-    description: d.description,
+    summary: d.summary,
+    perks: d.perks,
+    capacity: d.capacity,
+    cover: d.cover,
+    gallery: d.gallery,
   };
+}
+
+// 兼容不同图片字段名：cover / mainImage / image / poster / gallery[]
+const TABLE_FIELDS = `
+  _id,
+  "slug": coalesce(slug.current, slug),
+  title,
+  price,
+  summary,
+  perks,
+  capacity,
+  // 主图 URL 兜底
+  "cover": coalesce(
+    cover.asset->url,
+    mainImage.asset->url,
+    image.asset->url,
+    poster.asset->url
+  ),
+  // 图集 URL 兜底（若 schema 用 gallery: [{image}] 或 images: [{image}] 都尝试取）
+  "gallery": coalesce(
+    gallery[].asset->url,
+    images[].asset->url
+  )
+`;
+
+// 列表：取所有桌位产品（或按需求限制数量/排序）
+export async function getTables(limit = 50): Promise<TableItem[]> {
+  const q = `
+    *[_type == "table"] 
+      | order(title asc)[0...$limit]{
+        ${TABLE_FIELDS}
+      }
+  `;
+  const docs = await client.fetch<TableDoc[]>(
+    q,
+    { limit },
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+  );
+  return docs.map(mapTable);
+}
+
+// 详情：通过 slug 取单个桌位产品
+export async function getTableBySlug(slug: string): Promise<TableItem | null> {
+  const q = `*[_type == "table" && slug.current == $slug][0]{ ${TABLE_FIELDS} }`;
+  const d = await client.fetch<TableDoc | null>(
+    q,
+    { slug },
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+  );
+  return d ? mapTable(d) : null;
 }
