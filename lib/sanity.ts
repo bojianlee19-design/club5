@@ -122,40 +122,74 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
  */
 // lib/sanity.ts  ——— 在现有内容里补充 / 覆盖 Table 相关定义
 
+// ---------- Tables ----------
+
 export type TableDoc = {
   _id: string;
   slug?: { current: string } | string;
   title?: string;
   cover?: string;
+  // 新增这些后端可选字段
+  capacity?: string;
+  minSpend?: string;
+  price?: string;
+  bookingUrl?: string;
 };
 
 export type TableItem = {
   id: string;
-  slug: string;          // <-- 关键：显式包含 slug
+  slug: string;
   title: string;
   cover?: string;
+  // 让页面里使用的字段都有类型
+  capacity?: string;
+  minSpend?: string;
+  price?: string;
+  bookingUrl?: string;
 };
 
-// 兼容不同封面字段：cover / image 等
+// 统一映射
+function mapTable(d: TableDoc): TableItem {
+  return {
+    id: d._id,
+    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || '',
+    title: d.title || 'Untitled',
+    cover: d.cover,
+    capacity: d.capacity,
+    minSpend: d.minSpend,
+    price: d.price,
+    bookingUrl: d.bookingUrl,
+  };
+}
+
+// 封面字段兼容：cover / image / mainImage / poster
 const TABLE_FIELDS = `
   _id,
-  "slug": coalesce(slug.current, slug, _id),
+  "slug": coalesce(slug.current, slug),
   title,
-  "cover": coalesce(cover.asset->url, image.asset->url)
+  "cover": coalesce(
+    cover.asset->url,
+    image.asset->url,
+    mainImage.asset->url,
+    poster.asset->url
+  ),
+  capacity,
+  minSpend,
+  price,
+  bookingUrl
 `;
 
-export async function getTables(): Promise<TableItem[]> {
-  const q = `*[_type == "table"]{ ${TABLE_FIELDS} }`;
+// 拉取 tables（如果你的 schema 名叫 "table"）
+export async function getTables(limit = 50): Promise<TableItem[]> {
+  const q = `
+    *[_type == "table"] | order(_createdAt desc)[0...$limit]{
+      ${TABLE_FIELDS}
+    }
+  `;
   const docs = await client.fetch<TableDoc[]>(
     q,
-    {},
-    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+    { limit },
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } },
   );
-
-  return docs.map((d) => ({
-    id: d._id,
-    slug: typeof d.slug === 'string' ? d.slug : d.slug?.current || d._id,
-    title: d.title || 'Table',
-    cover: d.cover,
-  }));
+  return docs.map(mapTable);
 }
