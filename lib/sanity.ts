@@ -150,6 +150,65 @@ export async function getEventBySlug(slug: string): Promise<EventItem | null> {
     { slug },
     { cache: 'no-store', next: { revalidate: 0, tags: ['events'] } }
   );
+  // --- Tables 类型 ---
+export type TableItem = {
+  id: string;
+  title: string;
+  cover?: string;
+  capacity?: number | string;
+  price?: string;        // 文本价格或 minSpend/priceText 的兜底
+  bookUrl?: string;      // 预订或购票链接
+  description?: string;
+};
+
+// 兜底映射（把不同字段名收敛）
+function mapTable(d: any): TableItem {
+  return {
+    id: d._id,
+    title: d.title || 'Untitled Table',
+    cover: d.cover || d.image || d.mainImage || d.poster,
+    capacity: d.capacity,
+    price: d.priceText || d.price || d.minSpend,
+    bookUrl: d.bookUrl || d.ticketUrl,
+    description: d.summary || d.description,
+  };
+}
+
+// 同步不同可能字段名的封面等（与你 events 的写法保持一致）
+const TABLE_FIELDS = `
+  _id,
+  title,
+  capacity,
+  price,
+  priceText,
+  minSpend,
+  summary,
+  description,
+  "bookUrl": coalesce(bookUrl, ticketUrl),
+  "cover": coalesce(
+    cover.asset->url,
+    image.asset->url,
+    mainImage.asset->url,
+    poster.asset->url
+  )
+`;
+
+// 查询：允许多种可能的文档名，没建表也不会报错，只会返回 []
+export async function getTables(): Promise<TableItem[]> {
+  const q = `
+    *[_type in ["table", "vipTable", "tables"]] 
+      | order(order asc, _createdAt asc){
+        ${TABLE_FIELDS}
+      }
+  `;
+  const docs = await client.fetch<any[]>(
+    q,
+    {},
+    { cache: 'no-store', next: { revalidate: 0, tags: ['tables'] } }
+  );
+  return (docs || []).map(mapTable);
+}
+
   return d ? toEventItem(d) : null;
 }
 
