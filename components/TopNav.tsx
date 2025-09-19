@@ -1,140 +1,173 @@
-// components/TopNav.tsx
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
-
-function PillButton({
-  href,
-  children,
-  onClick,
-}: {
-  href?: string;
-  children: React.ReactNode;
-  onClick?: () => void;
-}) {
-  const Cmp: any = href ? Link : 'button';
-  return (
-    <Cmp
-      href={href as any}
-      onClick={onClick}
-      className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-white ring-1 ring-white/20 hover:bg-white/25"
-    >
-      {children}
-    </Cmp>
-  );
-}
+import { usePathname } from 'next/navigation';
 
 export default function TopNav() {
-  const [open, setOpen] = useState(false);
-  const [logoFailed, setLogoFailed] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const navRef = React.useRef<HTMLDivElement | null>(null);
+  const pathname = usePathname();
 
-  // 点击外部关闭
-  useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+  // 1) 点击外部关闭
+  React.useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!navRef.current) return;
+      if (!navRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
-    if (open) document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  // 2) 路由变化自动关闭
+  React.useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  // 公共样式：磨砂胶囊按钮
+  const pill =
+    'rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white/90 hover:bg-white/15 hover:text-white transition-colors';
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center">
-      <div
-        ref={ref}
-        className="pointer-events-auto flex items-center gap-3 rounded-full bg-black/35 px-3 py-2 text-white shadow-lg ring-1 ring-white/15 backdrop-blur-md"
-      >
-        {/* 左侧 LOGO（如果图片不存在会回退为文字） */}
-        <Link href="/" className="mr-1 flex items-center gap-2">
-          {!logoFailed ? (
+    <>
+      {/* 顶部：居中磨砂导航条 */}
+      <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex w-full justify-center">
+        <div
+          ref={navRef}
+          className="
+            pointer-events-auto
+            flex items-center gap-3
+            rounded-3xl border border-white/15 bg-black/60 px-3 py-2 text-white shadow-2xl backdrop-blur
+            ring-1 ring-white/10
+            max-w-[92vw]
+          "
+        >
+          {/* 左侧 LOGO（使用你 /public 里的文件名；若不同可自行替换） */}
+          <Link
+            href="/"
+            className="mr-1 flex items-center gap-2 rounded-2xl px-2 py-1 hover:bg-white/10"
+            aria-label="Go home"
+          >
             <Image
-              src="/hazy-logo.png"
+              src="/hazy-logo-red.png"
               alt="HAZY CLUB"
-              width={92}
-              height={18}
-              className="h-5 w-auto"
-              onError={() => setLogoFailed(true)}
+              width={88}
+              height={28}
+              className="h-6 w-auto object-contain"
               priority
             />
-          ) : (
-            <span className="text-sm font-bold tracking-wide">HAZY&nbsp;CLUB</span>
-          )}
-        </Link>
+          </Link>
 
-        {/* 居中三键 */}
-        <div className="hidden md:flex items-center gap-2">
-          <PillButton onClick={() => setOpen((v) => !v)}>Menu</PillButton>
-          <PillButton href="/#tables">Tables</PillButton>
-          <PillButton href="/events">Tickets</PillButton>
+          {/* 三个主按钮 */}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className={pill}
+            aria-expanded={open}
+            aria-controls="hc-menu-popover"
+          >
+            MENU
+          </button>
+
+          <Link href="/tables" className={pill}>
+            TABLES
+          </Link>
+
+          {/* Tickets -> 统一到 /events（What’s On） */}
+          <Link href="/events" className={pill}>
+            TICKETS
+          </Link>
         </div>
-
-        {/* 右侧移动端：显示三键（MENU 可展开） */}
-        <div className="flex md:hidden items-center gap-2">
-          <PillButton onClick={() => setOpen((v) => !v)}>Menu</PillButton>
-          <PillButton href="/#tables">Tables</PillButton>
-          <PillButton href="/events">Tickets</PillButton>
-        </div>
-
-        {/* 下拉：点击空白自动回收 */}
-        {open && (
-          <div className="absolute left-1/2 top-[calc(100%+10px)] w-[92vw] max-w-[560px] -translate-x-1/2 rounded-2xl bg-black/70 p-4 shadow-xl ring-1 ring-white/15 backdrop-blur-xl">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <Link
-                href="/"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                Home Page
-              </Link>
-              <Link
-                href="/events"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                What’s On / Tickets
-              </Link>
-              <Link
-                href="/membership"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                Membership
-              </Link>
-              <Link
-                href="/venue-hire"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                Venue Hire
-              </Link>
-              <Link
-                href="/about"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                About Our Club
-              </Link>
-              <Link
-                href="/contact"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                Contact Us
-              </Link>
-              <Link
-                href="/sign-in"
-                onClick={() => setOpen(false)}
-                className="rounded-xl bg-white/5 p-3 ring-1 ring-white/10 hover:bg-white/10"
-              >
-                Sign in / Register
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* 右上角：Sign in / Register（轻量，不影响主导航布局） */}
+      <div className="fixed right-4 top-4 z-40 hidden sm:flex items-center gap-2">
+        <Link
+          href="/sign-in"
+          className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/85 hover:bg-white/15"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/register"
+          className="rounded-xl border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white/85 hover:bg-white/15"
+        >
+          Register
+        </Link>
+      </div>
+
+      {/* 下拉菜单：跟随导航条，点击空白可关闭；移动端同样适配 */}
+      <div
+        id="hc-menu-popover"
+        className={`
+          fixed left-1/2 z-30 mt-2 w-[92vw] max-w-md -translate-x-1/2
+          rounded-2xl border border-white/15 bg-black/80 p-2 text-white shadow-2xl backdrop-blur
+          transition-all duration-150
+          ${open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}
+        `}
+        style={{ top: '72px' }}
+        aria-hidden={!open}
+      >
+        <ul className="divide-y divide-white/10">
+          <li>
+            <Link
+              href="/"
+              className="block px-4 py-3 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              Home Page
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/events"
+              className="block px-4 py-3 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              What&apos;s On
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/membership"
+              className="block px-4 py-3 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              Membership
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/venue-hire"
+              className="block px-4 py-3 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              Venue Hire
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/about"
+              className="block px-4 py-3 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              About Our Club
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/contact"
+              className="block px-4 py-3 hover:bg-white/10"
+              onClick={() => setOpen(false)}
+            >
+              Contact Us
+            </Link>
+          </li>
+        </ul>
+      </div>
+    </>
   );
 }
