@@ -157,3 +157,22 @@ export type TableItem = {
   capacity?: number;
   cover?: string;
 };
+// —— Tables 占位类型与函数（先保证构建通过，后续接真数据再实现）——
+export type TableItem = {
+  slug: string;
+  title: string;
+  cover?: string;
+  blurb?: string;
+  minSpend?: string;
+  capacity?: string;
+};
+
+// 列表（暂时返回空数组）
+export async function getTables(): Promise<TableItem[]> {
+  return [];
+}
+
+// 详情（暂时返回 null）
+export async function getTableBySlug(slug: string): Promise<TableItem | null> {
+  return null;
+}
